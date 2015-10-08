@@ -22,6 +22,7 @@ class Hello_Controller extends Controller{
         $view = new View('view');
         //$view->name = 'it is view function';
         $view->name = 'GIT Test!';
+        $view->value = 'Github update!';
         
         $view->render(true);
         
