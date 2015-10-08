@@ -20,7 +20,8 @@ class Hello_Controller extends Controller{
      */
     public function view(){
         $view = new View('view');
-        $view->name = 'it is view function';
+        //$view->name = 'it is view function';
+        $view->name = 'GIT Test!';
         
         $view->render(true);
         
