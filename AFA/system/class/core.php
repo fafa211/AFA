@@ -26,14 +26,58 @@ class Controller {
  *
  */
 class Model {
-	public $orm;
+	//数据库链接对象
 	public $db;
+	//数据表名称
+	protected $table;
+	//主键字段，通常为自增ID字段
+	protected $primary = 'id';
 	public function __construct($id = null){
 		$this->db = db::instance();
 		if ($id){
-			$sql = "SELECT * FROM {$this->tbname} WHERE id = ".intval($id);
-			$this->orm = $this->db->getOneResult($sql);
+			$sql = "SELECT * FROM `{$this->table}` WHERE `{$this->primary}` = '".addslashes($id)."'";
+			$orm = $this->db->getOneResult($sql);
+			foreach ($orm as $k=>$v){
+			    $this->$k = $v;
+			}
+			unset($orm);
 		}
+	}
+	
+	public function save(){
+	    if ($this->{$this->primary}){
+	        $sql = "update `{$this->table}` set ";
+	        foreach ($this->fileds as $f=>$v){
+	            if ($f == $this->primary) continue;
+	            if (isset($this->$f)){
+	               $sql .= "`{$f}` = '".addslashes($this->$f)."',";
+	            }else{
+	                $sql .= "`{$f}` = '".addslashes($v)."',";
+	            }
+	        }
+	        $sql = substr($sql, 0, -1);
+	        $sql .= "where `{$this->primary}`='".addslashes($this->{$this->primary})."'";
+	    }else{
+	        $sql = "insert into `{$this->table}` set ";
+	        foreach ($this->fileds as $f=>$v){
+	            if ($f == $this->primary) continue;
+	            if (isset($this->$f)){
+	                $sql .= "`{$f}` = '".addslashes($this->$f)."',";
+	            }else{
+	                $sql .= "`{$f}` = '".addslashes($v)."',";
+	            }
+	        }
+	        $sql = substr($sql, 0, -1);
+	    }
+	    $this->db->exec($sql);
+	}
+	
+	public function __get($name){
+	    return isset($this->$name)?$this->$name:'';
+	}
+	
+	public function __set($name, $value){
+	    $this->$name = $value;
 	}
 }
 

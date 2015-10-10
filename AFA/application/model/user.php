@@ -23,7 +23,7 @@ class User_Model extends Model{
      * @param string $account: the user account
      */
     public function get($account){
-        $sql = 'select * from `'.$this->table.'` where account="'.addslashes($account).'"';
+        $sql = sql::select('*',$this->table)->where('account','=',$account);
         $rs = $this->db->getOneResult($sql);
         
         foreach ($rs as $k=>$v){
