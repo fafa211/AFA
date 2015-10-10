@@ -87,8 +87,8 @@ class Hello_Controller extends Controller{
         
         echo '<br />';
         echo sql::select('*', 'user as u')->where('id','>',1)->innerjoin('user_textinfo as ut', 'u.id = ut.user_id')->limit(1)->or_c('id','=',3)->and_c(array('id'=>1))->orderby('id desc');
-        
-        
+        echo '<br />';
+        echo sql::delete('user')->where('id','>',3)->orderby('id desc')->limit(1);
         
     }
 }

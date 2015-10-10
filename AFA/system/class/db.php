@@ -212,7 +212,7 @@ class sql {
     
     /**
      * 
-     * @param string $type: 类型总共三个 SELECT,INSERT,UPDATE
+     * @param string $type: 类型总共三个 SELECT,INSERT,UPDATE,DELETE
      */
     public function __construct($type = 'SELECT'){
         $this->type = strtoupper($type); 
@@ -255,6 +255,19 @@ class sql {
     public static function update($val = array(), $table = '', $where = array()){
         $_this = new self('UPDATE');
         $_this->set($val);
+        $_this->table($table);
+        $_this->where($where);
+        return $_this;
+    }
+    
+    /**
+     * 删除语句
+     * @param string $table
+     * @param array $where array('key' => 'val')
+     * @return sqlbuild object
+     */
+    public static function delete($table = '', $where = array()){
+        $_this = new self('DELETE');
         $_this->table($table);
         $_this->where($where);
         return $_this;
@@ -425,7 +438,7 @@ class sql {
     }
     
     /**
-     * 设置排序字段
+     * 设置读取条数 LIMIT $offset, $num
      * @param int $offset:起始位置
      * @param int $num:结果条数
      * @return $this object
@@ -463,38 +476,64 @@ class sql {
      * @return string : sql
      */
     public function __toString(){
-        if ($this->type == 'INSERT'){
-            $this->sql = $this->type.' INTO `'.$this->table.'` SET '.$this->set;
-        }else if($this->type == 'UPDATE'){
-            $this->sql = $this->type.' `'.$this->table.'` SET '.$this->set;
-            if ($this->where) {
-                $this->sql .= ' WHERE '.$this->where;
-            }
-        }else if ($this->type == 'SELECT'){
-            $this->sql = $this->type.' '.$this->filed.' FROM '.$this->table;
-            foreach ($this->innerarr as $v){
-                $this->sql .= ' INNER JOIN '.$v['table'].' ON '.$v['condition'];
-            }
-            foreach ($this->leftarr as $v){
-                $this->sql .= ' LEFT JOIN '.$v['table'].' ON '.$v['condition'];
-            }
-            foreach ($this->rightarr as $v){
-                $this->sql .= ' RIGHT JOIN '.$v['table'].' ON '.$v['condition'];
-            }
-            if ($this->where){
-                $this->sql .= ' WHERE '.$this->where;
-            }
-            if ($this->groupby){
-                $this->sql .= ' GROUP BY '.$this->groupby;
-            }
-            if ($this->orerby){
-                $this->sql .= ' ORDER BY '.$this->orerby;
-            }
-            if ($this->limit){
-                $this->sql .= ' LIMIT '.$this->limit;
-            }
-            
+        switch ($this->type) {
+            case 'SELECT':
+                $this->sql = $this->type . ' ' . $this->filed . ' FROM ' . $this->table;
+                foreach ($this->innerarr as $v) {
+                    $this->sql .= ' INNER JOIN ' . $v['table'] . ' ON ' . $v['condition'];
+                }
+                foreach ($this->leftarr as $v) {
+                    $this->sql .= ' LEFT JOIN ' . $v['table'] . ' ON ' . $v['condition'];
+                }
+                foreach ($this->rightarr as $v) {
+                    $this->sql .= ' RIGHT JOIN ' . $v['table'] . ' ON ' . $v['condition'];
+                }
+                if ($this->where) {
+                    $this->sql .= ' WHERE ' . $this->where;
+                }
+                if ($this->groupby) {
+                    $this->sql .= ' GROUP BY ' . $this->groupby;
+                }
+                if ($this->orerby) {
+                    $this->sql .= ' ORDER BY ' . $this->orerby;
+                }
+                if ($this->limit) {
+                    $this->sql .= ' LIMIT ' . $this->limit;
+                }
+                break;
+            case 'UPDATE':
+                $this->sql = $this->type . ' `' . $this->table . '` SET ' . $this->set;
+                if ($this->where) {
+                    $this->sql .= ' WHERE ' . $this->where;
+                }
+                if($this->orerby){
+                    $this->sql .= ' ORDER BY ' . $this->orerby;
+                }
+                if ($this->limit) {
+                    $this->sql .= ' LIMIT ' . $this->limit;
+                }
+                break;
+            case 'INSERT':
+                $this->sql = $this->type . ' INTO `' . $this->table . '` SET ' . $this->set;
+                break;
+            case 'DELETE':
+                $this->sql = $this->type . ' FROM `' . $this->table . '`';
+                if ($this->where) {
+                    $this->sql .= ' WHERE ' . $this->where;
+                }
+                if($this->orerby){
+                    $this->sql .= ' ORDER BY ' . $this->orerby;
+                }
+                if ($this->limit) {
+                    $this->sql .= ' LIMIT ' . $this->limit;
+                }elseif (empty($this->where)){
+                    $this->sql .= ' LIMIT 1';//如果条件为空时，且没有限制条数，则添加限制条数为1条， 防止误删除
+                }
+                break;
+            default:
+                break;
         }
+        
         return $this->sql;
     }
     
