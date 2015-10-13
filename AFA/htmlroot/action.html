@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<script src="//cdn.bootcss.com/jquery/2.1.4/jquery.js"></script>
+<script src="static/js/libs/action.js"></script>
+
+
+</head>
+<body>
+
+<h1>Test</h1>
+<a href="javascript:void(0);" data-action="some-btn">do</a>
+
+<p class = "someClass" data-action="lucky-draw">okokokok</p>
+<button data-action='more-action'>more action</button>
+</body>
+<script type="text/javascript">
+
+    function log() {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift("App: ");
+        console.log.apply(console, args);
+    }
+
+    /* $body = $(document.body);
+
+    var actionList = {
+    		'lucky-draw':function(){
+    			log('lucky-draw');
+    		},
+    		'some-btn':function(){
+    			log('some-btn');
+    		}
+    }
+    
+    $.extend(actionList, {'more-action':function(){
+    	log('more-action');
+    }});
+    
+    $body.on('click', '[data-action]', function() {
+        var actionName = $(this).data('action');
+        var action = actionList[actionName];
+        if($.isFunction(action)) action();
+    }); */
+    
+    action.add({
+    	'lucky-draw':function(){
+    		log(this.toString());
+    	},
+    	'some-btn':function(){
+            log(this.toString());
+        },
+        'more-action':function(){
+        	log(this.toString());
+        }
+    })
+    
+    function f1(){
+
+    　　　　var n=999; //加了var，所以n为局部变量
+
+    　　　　nAdd=function(){n+=1}  //未加var，所以nAdd为全局变量，此变量为一个内部函数
+
+    　　　　function f2(){
+    　　　　　　log(n);
+    　　　　}
+
+    　　　　return f2;
+
+    　　}
+
+    　　var result=f1();
+
+    　　result(); // 999
+
+    　　nAdd();
+
+    　　result(); // 1000
+    
+    var name = "The Window";   
+  　var object = {  
+  　　　　name : "My Object",  
+  　　　　getNameFunc : function(){
+  　　　　　　return function(){  
+  　　　　　　　　return this.name;  
+  　　　　　};   
+  　　　　}   
+  };  
+  log(object.getNameFunc()());  //The Window
+  
+  console.log(Object.getOwnPropertyNames(Object.prototype));
+  
+  console.log(Function.prototype, Function.__proto__);
+  
+  console.log(Object.prototype, Object.__proto__);
+  
+  function F() {}
+  console.log(F.prototype, F.__proto__);
+  
+  
+  var o = new Object(); // var o = {};
+  console.log(o.prototype, o.__proto__);
+  function F() {}
+  F.prototype.a = function() {};
+  var i = new F();
+  console.log(i.prototype, i.__proto__);
+</script>
+</html>

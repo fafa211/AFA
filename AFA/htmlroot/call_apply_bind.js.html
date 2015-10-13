@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<script src="//cdn.bootcss.com/jquery/2.1.4/jquery.js"></script>
+<script type="text/javascript">
+function log(){
+	var args = Array.prototype.slice.call(arguments);
+	args.unshift("App: ");
+	console.log.apply(console, args);
+}
+
+function fruits(){}
+
+fruits.prototype={
+		color:"red",
+		say:function(arg1,arg2){
+			log("My color is "+this.color+",the param is "+arg1+","+arg2);
+		}
+}
+
+var apple = new fruits;
+apple.say(1,1);
+
+var banana = {
+		color:"yellow"
+}
+
+//call VS apply
+apple.say.call(banana,2,2);
+apple.say.apply(banana,[3,3]);
+
+//数组追加
+var array1 = [12,"foo",{name:"joe"},-2358];
+var array2 = ["Doe",555,100];
+
+//array1.push(array2);
+Array.prototype.push.apply(array1,array2);
+log(array1.toString());
+
+var numbers = [5,458,120,-215];
+log(Math.max.apply(Math, numbers));
+log(Math.max.call(Math, 5,458,120,-215));
+
+function isArray(obj){
+	return Object.prototype.toString.call(obj) === '[object Array]';
+}
+log(isArray(banana)+','+isArray(numbers));
+
+
+
+
+</script>
+
+</head>
+<body>
+
+<h1>Test</h1>
+<a href="">do</a>
+
+<p class = "someClass">okokokok</p>
+</body>
+
+<script>
+/* var domNodes = Array.prototype.slice.call(document.getElementsByTagName("*"));
+console.log(domNodes.toString());
+for(var i= 0; i<domNodes.length; i++){
+	console.log(domNodes[i].nodeName);
+} */
+
+
+var foo = {
+	bar : 1,
+	x   : 3,
+	eventBind : function() {
+		$('.someClass').on("click", function(event) {
+			log(this.bar+','+event.toString());
+		}.bind(this));
+	}
+}
+var bar = function(arg1,arg2){
+	log(this.x+','+arg1+','+arg2);
+	
+}
+var func = bar.bind(foo,34,45);
+func(56,78);
+
+var obj = {x:81}
+var foo = {
+		getX:function(){
+			return this.x;
+		}
+}
+log(foo.getX.bind(obj)());
+log(foo.getX.call(obj));
+log(foo.getX.apply(obj));
+
+</script>
+</html>
