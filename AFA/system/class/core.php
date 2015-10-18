@@ -19,6 +19,41 @@ class Controller {
 	public function __call($method = '', $params = ''){
 		common::go404();
 	}
+	
+	public function echojson(){
+	    
+	}
+	
+	public function echomsg($message, $url = false){
+        header("HTTP/1.1 200 OK");
+        header("Status: 200");
+        header("Content-Type: text/html; charset=UTF-8");
+        if ($url){
+            header("refresh:3;url=$url");
+        }
+        if (preg_match('/MSIE/i', input::server('HTTP_USER_AGENT'))) {
+            echo str_repeat(" ", 512);
+        }
+        echo $message;
+        exit();
+	}
+	
+	public function echoerror(){
+	    
+	}
+	
+	public function echo404($message){
+	    header("HTTP/1.1 404 Not Found");
+	    header("Status: 404 Not Found");
+	    header("Content-Type: text/html; charset=UTF-8");
+	    if (preg_match('/MSIE/i',input::server('HTTP_USER_AGENT'))){
+	        echo str_repeat(" ",512);
+	    }
+	    echo 'this 404 page <br />';
+	    echo $message;
+	    exit;
+	}
+	
 }
 
 /**
@@ -35,41 +70,66 @@ class Model {
 	public function __construct($id = null){
 		$this->db = db::instance();
 		if ($id){
-			$sql = "SELECT * FROM `{$this->table}` WHERE `{$this->primary}` = '".addslashes($id)."'";
+		    $sql = sql::select('*', $this->table, array("$this->primary"=>$id));
 			$orm = $this->db->getOneResult($sql);
-			foreach ($orm as $k=>$v){
-			    $this->$k = $v;
-			}
+			if ($orm){
+                foreach ($orm as $k => $v) {
+                    $this->$k = $v;
+                }
+            }
 			unset($orm);
 		}
 	}
 	
+	/**
+	 * 更新与插入  ORM
+	 * @return Ambigous <boolean, number>
+	 */
 	public function save(){
-	    if ($this->{$this->primary}){
-	        $sql = "update `{$this->table}` set ";
-	        foreach ($this->fileds as $f=>$v){
-	            if ($f == $this->primary) continue;
-	            if (isset($this->$f)){
-	               $sql .= "`{$f}` = '".addslashes($this->$f)."',";
-	            }else{
-	                $sql .= "`{$f}` = '".addslashes($v)."',";
-	            }
-	        }
-	        $sql = substr($sql, 0, -1);
-	        $sql .= "where `{$this->primary}`='".addslashes($this->{$this->primary})."'";
-	    }else{
-	        $sql = "insert into `{$this->table}` set ";
-	        foreach ($this->fileds as $f=>$v){
-	            if ($f == $this->primary) continue;
-	            if (isset($this->$f)){
-	                $sql .= "`{$f}` = '".addslashes($this->$f)."',";
-	            }else{
-	                $sql .= "`{$f}` = '".addslashes($v)."',";
-	            }
-	        }
-	        $sql = substr($sql, 0, -1);
+	    $fieldsArr = array();
+	    $insert = false;
+	    foreach ($this->fileds as $f=>$v){
+	        if ($f == $this->primary) continue;
+	        $fieldsArr[$f] = isset($this->$f)?$this->$f:$v;
 	    }
-	    $this->db->exec($sql);
+	    if ($this->{$this->primary}){
+	        $sql = sql::update($fieldsArr, $this->table, array("{$this->primary}"=>$this->{$this->primary}));
+	    }else{
+	        $insert = true;
+	        $sql = sql::insert($fieldsArr, $this->table);
+	    }
+	    
+	    $flag = $this->db->exec($sql);
+	    if ($flag && $insert){
+	        //插入数据后更新当前数据的ID
+	        $this->{$this->primary} = $this->db->getId(); 
+	    }
+	    return $flag;
+	}
+	
+	/**
+	 * 删除 ORM
+	 */
+	public function delete(){
+	    if ($this->{$this->primary}){
+	        $sql = sql::delete($this->table, array("{$this->primary}"=>"{$this->{$this->primary}}"));
+	        return $this->db->exec($sql);
+	    }
+	    return false;
+	}
+	/**
+	 * 基础查询
+	 * @param string $limit
+	 * @param array $where
+	 * @param string $orderby
+	 * @return multitype: 查询结果
+	 */
+	public function lists($limit = "0,10", $where = array(), $orderby = ''){
+	    $sql = sql::select('*', $this->table)
+	    ->where($where)
+	    ->orderby($orderby?$orderby:"{$this->primary} DESC")
+	    ->limit($limit)->render();
+	    return $this->db->query($sql);
 	}
 	
 	public function __get($name){

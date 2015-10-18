@@ -78,7 +78,7 @@ class db
      */
     public function getId()
     {
-    	$this->OperationData('update');
+    	$this->OperationData('insert');
         return $this->db->lastInsertId();
     }
 
@@ -242,6 +242,7 @@ class sql {
     public static function insert($val = array(), $table = ''){
         $_this = new self('INSERT');
         $_this->set($val);
+        $_this->table($table);
         return $_this;
     }
     
@@ -439,7 +440,7 @@ class sql {
     
     /**
      * 设置读取条数 LIMIT $offset, $num
-     * @param int $offset:起始位置
+     * @param int|string $offset:起始位置
      * @param int $num:结果条数
      * @return $this object
      */
