@@ -10,13 +10,12 @@
 
 class codemaker_Controller extends Controller{
     
-    private $vdir = 'codemaker/';
     
     /**
      * model setting
      */
     public function index(){
-        $view = new View($this->vdir.'index');
+        $view = new View('index');
         $view->render();
     }
     
@@ -25,10 +24,10 @@ class codemaker_Controller extends Controller{
      */
     public function maker(){
         
-        $module = 'blog';//模型名称
-        $table = 'blog';//表名
+        $module = 'user';//模型名称
+        $table = 'user';//表名
         $prikey = 'id';//主键名
-        $fileds = array(
+        /**$fileds = array(
             array(
                 'name' => 'title',//字段名称
                 'cnname' => '标题',//字段中文名称(描述)
@@ -120,11 +119,65 @@ class codemaker_Controller extends Controller{
                 'default_value' => '1'
             )
         );
+        **/
+        
+        $fileds = array(
+            array(
+                'name' => 'account',
+                'cnname' => '账号',
+                'type' => 'text',
+                'type_extend' => '',
+                'required'=>true,
+                'is_edit'=>true,
+                'list_show'=>true,
+                'default_value' => ''
+            ),
+            array(
+                'name' => 'passwd',
+                'cnname' => '密码',
+                'type' => 'password',
+                'type_extend' => '',
+                'required'=>true,
+                'is_edit'=>true,
+                'list_show'=>true,
+                'default_value' => '1'
+            ),
+            array(
+                'name' => 'regtime',
+                'cnname' => '注册时间',
+                'type' => 'datetime',
+                'type_extend' => '',
+                'required'=>true,
+                'is_edit'=>false,
+                'list_show'=>true,
+                'default_value' => '0000-00-00 00:00:00'
+            ),
+            array(
+                'name' => 'logtime',
+                'cnname' => '登录时间',
+                'type' => 'datetime',
+                'type_extend' => '',
+                'required'=>true,
+                'is_edit'=>false,
+                'list_show'=>true,
+                'default_value' => '0000-00-00 00:00:00'
+            ),
+            array(
+                'name' => 'logip',
+                'cnname' => '登录ip',
+                'type' => 'text',
+                'type_extend' => '',
+                'required'=>false,
+                'is_edit'=>false,
+                'list_show'=>true,
+                'default_value' => '127.0.0.1'
+            )
+        );
         
         $maker = new codemaker($module, $table, $prikey, $fileds);
         $maker->store();//把生成结果保存到文件中
         
-        $this->echomsg('生成成功!');
+        $this->echomsg($module.' 模型生成成功!');
     }
     
 }

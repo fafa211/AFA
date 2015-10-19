@@ -193,7 +193,8 @@ class View {
 	 */
 	public function set_file($file)
 	{
-		$this->file = VIEPATH.$file.EXT;
+		global $cModule, $useModule;
+	    $this->file = ($useModule?MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'view'.DIRECTORY_SEPARATOR:VIEPATH).$file.EXT;
 	}
 
 	/**
@@ -256,9 +257,14 @@ class Load {
 	
 	static function loadClass($class_name)
 	{
-		if (strpos($class_name, '_') === false){
+	    global $useModule,$cModule;
+	    if (strpos($class_name, '_') === false){
 			if (($c = substr($class_name,0,1)) === strtolower($c)){
-				$file = APPPATH.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
+				if($useModule){
+				    $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
+				    if (file_exists($file))	return include($file);
+				}
+			    $file = APPPATH.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
 				if (file_exists($file))	return include(APPPATH.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT);
 				else return include(CLASSPATH.$class_name.EXT);
 			}else {
@@ -268,14 +274,23 @@ class Load {
 			$lastpos = strrpos($class_name, '_');
 			$suffix = substr($class_name, $lastpos+1);
 			$file = '';
+			$class_name = substr($class_name, 0, $lastpos);
 			if ($suffix == 'Model'){
-				$file = MODPATH.strtolower(substr($class_name, 0, $lastpos)).EXT;
+			    if($useModule){
+			        $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'model'.DIRECTORY_SEPARATOR.$class_name.EXT;
+			        if (file_exists($file))	return include($file);
+			    }
+			    $file = MODPATH.strtolower($class_name).EXT;
 			}elseif ($suffix == 'Controller'){
-				$file = CONPATH.strtolower(substr($class_name, 0, $lastpos)).EXT;
+			    if($useModule){
+			        $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'controller'.DIRECTORY_SEPARATOR.$class_name.EXT;
+			        if (file_exists($file))	return include($file);
+			    }
+			    $file = CONPATH.strtolower($class_name).EXT;
 			}
 			
 			if ($file && file_exists($file)) return include($file);
-			common::go404('page not exist.--'.$class_name.' not exist。');
+			common::go404('File not exist.--'.$class_name.' load failue,it can not find it。');
 		}
 	}
 }

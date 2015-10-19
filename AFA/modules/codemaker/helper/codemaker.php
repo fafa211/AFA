@@ -52,7 +52,7 @@ class codemaker {
        $this->ctrlstr .= "defined('AFA') or die('No AFA PHP Framework!');\n\n";
        $this->ctrlstr .= $this->note($this->name.'模型控制器', $this->author, $this->datetime);
        $this->ctrlstr .= "class {$this->name}_Controller extends Controller{\n\n";
-       $this->ctrlstr .= "private \$vdir = '{$this->name}/';\n\n";
+       //$this->ctrlstr .= "private \$vdir = '{$this->name}/';\n\n";
        
        foreach ($this->fields as $arr){
            if (in_array($arr['type'], array('checkbox','radio','select'))){
@@ -126,7 +126,7 @@ class codemaker {
                                 "\$this->echomsg('新增成功!', 'lists');\n".
                                 "}\n";
                 
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = new View('{$type}');\n";
                 
                 $this->ctrlstr .= "\$view->render();\n";
                 $this->ctrlstr .= "}\n\n";
@@ -158,7 +158,7 @@ class codemaker {
                     "\$this->echomsg('修改成功!', '../lists');\n".
                     "}\n";
                 
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = new View('{$type}');\n";
                 $this->ctrlstr .= "\$view->{$this->name} = \${$this->name};\n";
                 $this->ctrlstr .= "\$view->render();\n";
                 $this->ctrlstr .= "}\n\n";
@@ -167,7 +167,7 @@ class codemaker {
                 $this->ctrlstr .= $this->note("列表管理 ".$this->name);
                 $this->ctrlstr .= "public function lists(){\n";
                 $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model();\n";
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = new View('{$type}');\n";
                 $this->ctrlstr .= "\$view->lists = \${$this->name}->lists('0,10');\n";
                 
                 $list_fields_arr = array("'{$this->prikey}'");
@@ -189,7 +189,7 @@ class codemaker {
                     $this->ctrlstr .= "public function show(\${$this->prikey}){\n";
                     $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model(\${$this->prikey});\n";
                 
-                    $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                    $this->ctrlstr .= "\$view = new View('{$type}');\n";
                     $this->ctrlstr .= "\$view->{$this->name} = \${$this->name};\n";
                     
                     foreach ($this->fields as $arr){
@@ -222,24 +222,21 @@ class codemaker {
      */
     public function store(){
         //保存Controller文件
-        $this->write(CONPATH.$this->name.'.php', $this->ctrlstr);
+        $this->write(MODULEPATH.$this->name.'/controller/'.$this->name.'.php', $this->ctrlstr);
         
         //保存View视图文件
-        $viewdir = VIEPATH.$this->name;
-        if(!file_exists($viewdir)){
-            mkdir($viewdir, 0777);
-        }
+        $viewdir = MODULEPATH.$this->name.'/view/'.DIRECTORY_SEPARATOR;
         //创建add视图
-        $this->write($viewdir.DIRECTORY_SEPARATOR.'add.php', $this->viewarr['add']);
+        $this->write($viewdir.'add.php', $this->viewarr['add']);
         //创建edit视图
-        $this->write($viewdir.DIRECTORY_SEPARATOR.'edit.php', $this->viewarr['edit']);
+        $this->write($viewdir.'edit.php', $this->viewarr['edit']);
         //创建lists视图
-        $this->write($viewdir.DIRECTORY_SEPARATOR.'lists.php', $this->viewarr['lists']);
+        $this->write($viewdir.'lists.php', $this->viewarr['lists']);
         //创建lists视图
-        $this->write($viewdir.DIRECTORY_SEPARATOR.'show.php', $this->viewarr['show']);
+        $this->write($viewdir.'show.php', $this->viewarr['show']);
         
         //报错Model文件
-        $this->write(MODPATH.$this->name.'.php', $this->modelstr);
+        $this->write(MODULEPATH.$this->name.'/model/'.$this->name.'.php', $this->modelstr);
     }
     
     private function view_header($description){
@@ -443,10 +440,17 @@ class codemaker {
     }
     
     private function write($file, $string){
+        self::mkdir(dirname($file));
         file_put_contents($file, $string);
         $mask = umask();
         chmod($file, 0777);
         umask($mask);
+    }
+    //递归生成目录
+    private static function mkdir($dirname){
+        return file_exists($dirname)||mkdir($dirname, 0777, true);
+        file_exists(dirname($dirname)) || self::mkdir(dirname($dirname));
+        return file_exists($dirname) || mkdir($dirname, 0777);
     }
     
     private function checkBoxCheck(){
