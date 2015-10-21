@@ -1,6 +1,0 @@
-!.gitignore
-!.*
-!/runtime/cache
-!/runtime/log
-!/modules/blog
-!/modules/user
