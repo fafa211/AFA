@@ -122,7 +122,7 @@ class codemaker {
         switch ($type){
             case 'add':
                 $this->ctrlstr .= $this->note("新增".$this->name);
-                $this->ctrlstr .= "public function add(){\n";
+                $this->ctrlstr .= "public function add_Action(){\n";
                 $this->ctrlstr .= "if (input::post()){\n".
                                 "\$post = input::post();\n".
                                 "\${$this->name} = new {$this->name}_Model();\n".
@@ -133,14 +133,15 @@ class codemaker {
                                 "\$this->echomsg('新增成功!', 'lists');\n".
                                 "}\n";
                 
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = &\$this->view;\n";
+                $this->ctrlstr .= "\$view->set_view(\$this->vdir.'{$type}');\n";
                 
                 $this->ctrlstr .= "\$view->render();\n";
                 $this->ctrlstr .= "}\n\n";
                 break;
             case 'delete':
                 $this->ctrlstr .= $this->note("删除".$this->name);
-                $this->ctrlstr .= "public function delete(\${$this->prikey}){\n";
+                $this->ctrlstr .= "public function delete_Action(\${$this->prikey}){\n";
                 
                 $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model(\${$this->prikey});\n".
                                     "if(\${$this->name}->{$this->prikey}) {\n".
@@ -154,7 +155,7 @@ class codemaker {
                 break;
             case 'edit':
                 $this->ctrlstr .= $this->note("修改".$this->name);
-                $this->ctrlstr .= "public function edit(\${$this->prikey}){\n";
+                $this->ctrlstr .= "public function edit_Action(\${$this->prikey}){\n";
                 $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model(\${$this->prikey});\n";
                 $this->ctrlstr .= "if (input::post()){\n".
                     "\$post = input::post();\n".
@@ -165,16 +166,18 @@ class codemaker {
                     "\$this->echomsg('修改成功!', '../lists');\n".
                     "}\n";
                 
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = &\$this->view;\n";
+                $this->ctrlstr .= "\$view->set_view(\$this->vdir.'{$type}');\n";
                 $this->ctrlstr .= "\$view->{$this->name} = \${$this->name};\n";
                 $this->ctrlstr .= "\$view->render();\n";
                 $this->ctrlstr .= "}\n\n";
                 break;
             case 'lists':
                 $this->ctrlstr .= $this->note("列表管理 ".$this->name);
-                $this->ctrlstr .= "public function lists(){\n";
+                $this->ctrlstr .= "public function lists_Action(){\n";
                 $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model();\n";
-                $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                $this->ctrlstr .= "\$view = &\$this->view;\n";
+                $this->ctrlstr .= "\$view->set_view(\$this->vdir.'{$type}');\n";
                 $this->ctrlstr .= "\$view->lists = \${$this->name}->lists('0,10');\n";
                 
                 $list_fields_arr = array("'{$this->prikey}'");
@@ -193,10 +196,11 @@ class codemaker {
                 break;
             case 'show':
                     $this->ctrlstr .= $this->note("展示".$this->name);
-                    $this->ctrlstr .= "public function show(\${$this->prikey}){\n";
+                    $this->ctrlstr .= "public function show_Action(\${$this->prikey}){\n";
                     $this->ctrlstr .= "\${$this->name} = new {$this->name}_Model(\${$this->prikey});\n";
                 
-                    $this->ctrlstr .= "\$view = new View(\$this->vdir.'{$type}');\n";
+                    $this->ctrlstr .= "\$view = &\$this->view;\n";
+                    $this->ctrlstr .= "\$view->set_view(\$this->vdir.'{$type}');\n";
                     $this->ctrlstr .= "\$view->{$this->name} = \${$this->name};\n";
                     
                     foreach ($this->fields as $arr){
