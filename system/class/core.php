@@ -1,23 +1,185 @@
 <?php if (!defined('AFA')) die();
 
+class Request{
+    //模型名称
+    public $module = NULL;
+    //控制器名称
+    public $controller = '';
+    //执行方法
+    public $method = '';
+    //参数
+    public $params = array();
+    //模型路径
+    public $module_dir = '';
+    
+    public static function instance($url = ''){
+        return new self($url);
+    }
+    
+    public function __construct($url = ''){
+        
+        $url = trim($url);
+        if ($url == ''){
+            if(isset($_SERVER['PATH_INFO'])) {
+                $url = $_SERVER['PATH_INFO'];//此路径已被系统默认处理过了
+            } elseif (isset($_SERVER['argc']) && $_SERVER['argc']>1){
+                $url = self::parse($_SERVER['argv'][1]); //得到格式一致的路径URL，并设置$_GET
+            }
+        }else{
+            $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
+        }
+        
+        global $modules, $cModule, $cController, $cMethod;
+        
+        $path_vars = explode('/', $url);
+        
+        if(isset($path_vars[1]) && $path_vars[1])  {
+            $this->module = $path_vars[1];//模型名
+        }else{
+            $this->module = $cModule? $cModule: NULL;
+        }
+        
+        if(isset($path_vars[2]) && $path_vars[2])  {
+            $this->controller = $path_vars[2];
+        }else {
+            $this->controller = $cController;
+        }
+
+        if ($this->module && isset($modules[$this->module])) {
+            $this->module_dir = $modules[$this->module];
+            $cFile = $this->module_dir . 'controller' . DIRECTORY_SEPARATOR . $this->controller . EXT;
+            
+            if (file_exists($cFile)) {
+                include_once ($cFile);
+                if (isset($path_vars[3]) && $path_vars[3]) $this->method = $path_vars[3]; // 参数
+                else $this->method = $cMethod;
+                if (isset($path_vars[4]) && $path_vars[4])
+                    $this->params = array_slice($path_vars, 4); // 参数
+            } else {
+                // 方法名
+                $cFile = $this->module_dir . 'controller' . DIRECTORY_SEPARATOR . $this->module . EXT;
+                if (file_exists($cFile)) {
+                    include_once ($cFile);
+                    $this->controller = $this->module;
+                    if (isset($path_vars[2]) && $path_vars[2]) $this->method = $path_vars[2]; // 方法名
+                    else $this->method = $cMethod;
+                    if (isset($path_vars[3]) && $path_vars[3])
+                        $this->params = array_slice($path_vars, 3); // 参数
+                } else {
+                    throw new AfaException("Controller {$this->controller}:{$cFile} not exist! ", E_ERROR);
+                }
+            }
+            //把路径加入自动载入中
+            Load::addModule($this->module, $this->module_dir);
+            
+        } else {
+            $this->controller = $this->module;
+            $cFile = CONPATH . $this->controller . EXT;
+            if (file_exists($cFile)) {
+                include_once ($cFile);
+                if (isset($path_vars[2]) && $path_vars[2]) $this->method = $path_vars[2]; // 方法名
+                else $this->method = $cMethod;
+                if (isset($path_vars[3]) && $path_vars[3]) $this->params = array_slice($path_vars, 3); // 参数
+            } else {
+                throw new AfaException("Controller {$this->controller}:{$cFile} not exist! ", E_ERROR);
+            }
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * 执行请求
+     * @throws AfaException
+     */
+    public function run(){
+        try {
+            // controller 类的命名规则为：文件名(首字母大写)+'_Controller'
+            $class = new ReflectionClass(ucfirst($this->controller) . '_Controller');
+        } catch (ReflectionException $e) {
+            throw new AfaException($e->getMessage(), $e->getCode());
+        }
+        
+        // Create a new controller instance
+        $controller = $class->newInstance($this);
+        try {
+            // Load the controller method
+            $method = $class->getMethod($this->method.'_Action');
+            if ($method->isProtected() or $method->isPrivate()) {
+                common::go404('protected controller method');
+            }
+        } catch (ReflectionException $e) {
+            // Use __call instead
+            $method = $class->getMethod('__call');
+            
+            // Use arguments in __call format
+            array_unshift($this->params, $this->method.'_Action');
+        }
+        
+        $before = $class->getMethod('before');
+        $before->invokeArgs($controller, $this->params);
+        
+        // Execute the controller method
+        $method->invokeArgs($controller, $this->params);
+        
+        $after = $class->getMethod('after');
+        $after->invokeArgs($controller, $this->params);
+    }
+    
+    /**
+     * 
+     * @param string $url
+     * @return Ambigous <string, mixed>
+     */
+    private static function parse($url){
+        $url_arr = parse_url($url);
+        
+        if (isset($url_arr['query'])){//设置$_GET
+            $afa_vars = explode('&', $url_arr['query']);
+            foreach ($afa_vars as $afa_str){
+                $arr = explode('=', $afa_str);
+                //初始化get的值
+                $_GET[$arr[0]] = @$arr[1];
+            }
+            unset($afa_vars);
+        }
+        
+        $first_word = substr($url_arr['path'], 0, 1);
+        
+        return $first_word == '/'?$url_arr['path']:'/'.$url_arr['path'];
+    }
+
+}
+
 /**
  * 控制器类
  *
  */
 class Controller {
 	
+    public $view;
+    
+    public $request;
+    
 	/**
 	 * 默认模板地址
 	 *
 	 */
-	protected $template = 'template';
-	public $isLogin =false;
-	public function __construct(){
-		$this->template = View::instance($this->template);
+	public function __construct(Request $request){
+		$this->view = View::instance($request->module_dir);
+		$this->request = $request;
 	}
 	
 	public function __call($method = '', $params = ''){
 		throw new AfaException("方法 $method 不存在。");
+	}
+	
+	public function before(){
+	    
+	}
+	
+	public function after(){
+	     
 	}
 	
 	public function echojson(){
@@ -140,6 +302,10 @@ class View {
 	 */
 	private $file = '';
 	
+	private $filename = '';
+	
+	private $module_dir = '';
+	
 	/**
 	 * 视图变量存放
 	 */
@@ -155,15 +321,17 @@ class View {
 	 *
 	 * @param $file 视图文件名
 	 */
-	public function __construct($file){
-		$this->set_file($file);
+	public function __construct($file = ''){
+		$this->filename = $file;
 	}
 	
 	/**
 	 * @param 静态方法
 	 */
-	public static function instance($file){
-		return new View($file);
+	public static function instance($module_dir = '', $file = ''){
+		$view = new View($file);
+		$view->module_dir = $module_dir;
+		return $view;
 	}
 
 	/**
@@ -178,14 +346,24 @@ class View {
 		$this->params[$key] = $value;
 	}
 	
+	public function set_view($filename){
+	    $this->filename = $filename;
+	}
+	
 	/**
 	 * @param $file 视图文件名
 	 */
-	public function set_file($file)
+	private function set_file($file)
 	{
-		global $cModule, $useModule;
-	    $this->file = ($useModule?MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'view'.DIRECTORY_SEPARATOR:VIEPATH).$file.EXT;
-	}
+		if (file_exists($file))
+            $this->file = $file;
+        else {
+            $file = ($this->module_dir ? $this->module_dir : VIEPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
+            if (file_exists($file)) {
+                return $this->file = $file;
+            }else throw new AfaException($file. 'is not exit', E_ERROR);
+        }
+    }
 
 	/**
 	 * Magically gets a view variable.
@@ -217,10 +395,8 @@ class View {
 	 * 自动设置变量
 	 */
 	public function render($render = true){
-		if (!file_exists($this->file)){
-			throw new Exception('view file not exit');
-			exit();
-		}
+		$this->set_file($this->filename);
+
 		$data = array_merge(View::$global_params, $this->params);
 		// Buffering on
 		ob_start();
@@ -244,19 +420,14 @@ class View {
  * 自动载入类
  */
 class Load {
+    
+    public static $modules = array();
 	
 	static function loadClass($class_name)
 	{
-	    global $useModule,$cModule;
 	    if (strpos($class_name, '_') === false){
 			if (($c = substr($class_name,0,1)) === strtolower($c)){
-				if($useModule){
-				    $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
-				    if (file_exists($file))	return include($file);
-				}
-			    $file = APPPATH.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
-				if (file_exists($file))	return include($file);
-				else return include(CLASSPATH.$class_name.EXT);
+			    return self::loadModule($class_name, 'helper');
 			}else {
 				return include(CLASSPATH.$class_name.EXT);
 			}
@@ -265,23 +436,34 @@ class Load {
 			$suffix = substr($class_name, $lastpos+1);
 			$file = '';
 			$class_name = substr($class_name, 0, $lastpos);
-			if ($suffix == 'Model'){
-			    if($useModule){
-			        $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'model'.DIRECTORY_SEPARATOR.$class_name.EXT;
-			        if (file_exists($file))	return include($file);
-			    }
-			    $file = MODPATH.strtolower($class_name).EXT;
-			}elseif ($suffix == 'Controller'){
-			    if($useModule){
-			        $file = MODULEPATH.$cModule.DIRECTORY_SEPARATOR.'controller'.DIRECTORY_SEPARATOR.$class_name.EXT;
-			        if (file_exists($file))	return include($file);
-			    }
-			    $file = CONPATH.strtolower($class_name).EXT;
-			}
 			
-			if ($file && file_exists($file)) return include($file);
-			common::go404('File not exist.--'.$class_name.' load failue,it can not find it。');
+			if ($suffix == 'Model' || $suffix == 'Controller'){
+			    return self::loadModule($class_name, strtolower($suffix));
+			}
 		}
+	}
+	
+	public static function addModule($module, $dir){
+        if (! isset(self::$modules[$module])) {
+            self::$modules[$module] = $dir;
+        }
+	}
+	
+	/**
+	 * 自动载入model,helper,controller 或 class
+	 * @param unknown $class_name
+	 * @param string $type
+	 */
+	public static function loadModule($class_name, $type = 'model'){
+	    if(!empty(self::$modules)){
+	        foreach (self::$modules as $module => $dir) {
+	            $file = $dir . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
+	            if (file_exists($file)) return include ($file);
+	        }
+	    }
+	    $file = APPPATH . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
+        if (file_exists($file)) return include ($file);
+        else return include (CLASSPATH . $class_name . EXT);
 	}
 }
 
