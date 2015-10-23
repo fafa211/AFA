@@ -29,6 +29,10 @@ class Request{
             $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
         }
         
+        if(F::config('suffix')) {
+            $url = str_replace(F::config('suffix'), '', $url);
+        }
+        
         global $modules, $cModule, $cController, $cMethod;
         
         $path_vars = explode('/', $url);
@@ -217,10 +221,15 @@ class Model {
 	public $db;
 	//数据表名称
 	protected $table;
+	//模块名称
+	protected $module;
+	//数据库配置
+	protected $config;
+	
 	//主键字段，通常为自增ID字段
 	protected $primary = 'id';
 	public function __construct($id = null){
-		$this->db = db::instance();
+		$this->db = db::instance($this->module?$this->module:'default');
 		if ($id){
 		    $sql = sql::select('*', $this->table, array("$this->primary"=>$id));
 			$orm = $this->db->getOneResult($sql);
