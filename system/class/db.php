@@ -2,49 +2,77 @@
 
 /**
  * 数据库操作类 db 使用->PDO 接口
+ * 支持多个数据库，支持一主多从
  * @author    郑书发
- * @version    1.0
+ * @version    2.0
+ * @see        https://github.com/fluent/fluent-logger-php
+ * @author     郑书发 <22575353@qq.com>
+ * @category   db
+ * @package    Classes
+ * @copyright  Copyright (c) 2015-2020 afa-php.com
+ * @license    http://www.myqee.com/license.html
  */
 
 class db
 {   
-	protected static $_this; //存储自身对象 
+    //存储自身对象
+	private static $_this = array(); 
+	//存储当前使用的数据库链接
     private $db;
-    private $dsn = "";
-    private $user = "";
-    private $pass = "";
-    private $fetch_mode = PDO::FETCH_ASSOC;//读取数据方式FETCH_ASSOC \FETCH_NUM \FETCH_BOTH \FETCH_OBJ
-	
-    private static $write_db;
-	private static $read_db;
+    //读取数据方式FETCH_ASSOC \FETCH_NUM \FETCH_BOTH \FETCH_OBJ
+    private $fetch_mode = PDO::FETCH_ASSOC;
+    
+    //存储配置文件, 读服务器配置，写服务器配置
+    private $config = array();
+    //存放写服务器链接
+    private $write_db; 
+    //存放读链接
+	private $read_db;
+	//是否存在从库，默认无从库
+	private $has_slave = false; 
 	
     /**
      * 私有构造函数
      * @return  void
      */
-    private function __construct() 
+    private function __construct($config = 'default') 
     {
-    	$dbconfig = & $GLOBALS['config']['master'];
-        $this->dsn = "mysql:host={$dbconfig['host']};dbname={$dbconfig['dbname']}";
-        $this->user = $dbconfig['user'];
-        $this->pass = $dbconfig['password'];
-
-        $this->db = new PDO($this->dsn, $this->user, $this->pass, array(PDO::ATTR_PERSISTENT => $dbconfig['conmode']));
-        self::$write_db=$this->db;
-        $this->db->exec('SET NAMES '.$dbconfig['charset']);
-      
+        $config_arr = F::config('database.'.$config);
+        //master配置是必不可少的
+        if (!isset($config_arr['master']) || empty($config_arr['master'])) {
+            //没有模块数据库，则用默认数据库
+            $config_arr = F::config('database.default');
+        }
+        $this->config['write'] = $config_arr['master'];
+        $length = count($config_arr);
+        if ($length == 1){
+            $this->config['read'] = $config_arr['master'];
+        }else{
+            //从数据库个数
+            $slave_length = $length-1;
+            if ($slave_length == 1){
+                $this->config['read'] = $config_arr['slave'];
+            }else{
+                //从slave中随机读取一个
+                $rand = rand(1, $slave_length);
+                $this->config['read'] = $config_arr['slave'.$rand];
+            }
+            $this->has_slave = true;
+        }
+        
     }
    
     /**
      * create database instance
+     * @param string $config: 默认值为 default
      * @return pdoquery class object
      */
-    public static function instance()
+    public static function instance($config = 'default')
     {
-    	if (!is_object(self::$_this)) {
-    		self::$_this = new db();
-    	}
-    	return self::$_this;
+        if (! isset(self::$_this[$config])) {
+            self::$_this[$config] = new self($config);
+        }
+        return self::$_this[$config];
     } 
     
     /**
@@ -52,9 +80,9 @@ class db
      * @param  string $sql
      * @return  array 查询得到的数据数组
      */
-    public function query($sql)
+    public function query($sql, $master = false)
     {	
-    	$this->OperationData($sql);
+    	$this->setServer($master);
         $this->db->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
         $rs = $this->db->query($sql);
         $rs->setFetchMode($this->fetch_mode);
@@ -67,9 +95,9 @@ class db
      * @param  string $sql
      * @return  boolean 成功true
      */
-    public function exec($sql)
+    public function exec($sql, $master = true)
     {
-    	$this->OperationData($sql);
+    	$this->setServer($master);
         return $this->db->exec($sql);
     }
    
@@ -78,7 +106,7 @@ class db
      */
     public function getId()
     {
-    	$this->OperationData('insert');
+    	$this->setServer(true);
         return $this->db->lastInsertId();
     }
 
@@ -86,11 +114,12 @@ class db
      * 得到查询结果中的第一行第一列数据
      *
      * @param  string $sql
+     * @param $master 默认为从数据库读取
      * @return  string
      */
-    public function getOne($sql)
+    public function getOne($sql, $master = false)
     {
-    	$this->OperationData($sql);
+    	$this->setServer($master);
         $rs = $this->db->query($sql);
         return $rs->fetchColumn();
     } 
@@ -103,7 +132,7 @@ class db
      */
     public function getOneResult($sql)
     {
-    	$this->OperationData($sql);
+    	$this->setServer($sql);
         $rs = $this->db->query($sql);
 		
         $rs->setFetchMode($this->fetch_mode);
@@ -120,6 +149,7 @@ class db
             //$this->result->closeCursor();
             try
             {
+                $this->setServer(true);
                 $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
                 $this->db->beginTransaction();
@@ -140,50 +170,39 @@ class db
     
     /**
      * 处理mysql读写分离
+     * @param $master 是否使用主库链接
      */
-     private function OperationData($sql)
+     private function setServer($master = TRUE)
     {	
-    	if (trim($sql) == '')
-    		return ;
-    		
-    	$sql = trim(strtolower($sql));
-    	$is_select = substr($sql, 0, 6);
-
-    	if ($is_select == 'select'){
-
-    		//file_put_contents('check_sql.txt','从机：'.$sql."\t".date("Y-m-d H:i:s")."\n",FILE_APPEND);
-			if(is_object(self::$read_db)){
-				return $this->db = self::$read_db;
-			}
-			$this->connectData();
-    	}
-    	else {
-    		//file_put_contents('check_sql.txt','主机操作读写删：'.$sql."\t".date("Y-m-d H:i:s")."\n",FILE_APPEND);
-			if(is_object(self::$write_db)){
-				return $this->db = self::$write_db;
-			}
-			new db();
+    	if ($master || !$this->has_slave){
+    	    if ($this->write_db) {
+    	        $this->db = $this->write_db;
+    	    } else {
+    	        $this->db = $this->write_db = $this->connect($this->config['write']);
+    	    }
+    	}else{
+    	    if ($this->read_db) {
+    	        $this->db = $this->read_db;
+    	    } else {
+    	        $this->db = $this->read_db = $this->connect($this->config['read']);
+    	    }
     	}
     }
+    
     /**
      * 处理mysql连接
+     * @param array $config
      */
-    private function connectData(){
-    					
-		if (isset($GLOBALS['config']['slave']))
-			$dbconfig =  $GLOBALS['config']['slave'];
-		else 
-			$dbconfig = & $GLOBALS['config']['master'];	
-    
-		$this->dsn = "mysql:host={$dbconfig['host']};dbname={$dbconfig['dbname']}";
-		$this->user = $dbconfig['user'];
-		$this->pass = $dbconfig['password'];
-			    		
-		self::$read_db = new PDO($this->dsn, $this->user, $this->pass, array(PDO::ATTR_PERSISTENT => $dbconfig['conmode']));
-		$this->db =self::$read_db;
-		$this->db->exec('SET NAMES '.$dbconfig['charset']);
-
-       }
+    private static function connect($config){
+        try {
+            $dsn = "mysql:host={$config['host']};dbname={$config['dbname']}";
+            $db = new PDO($dsn, $config['user'], $config['password'], array(PDO::ATTR_PERSISTENT => $config['conmode']));
+            $db->exec('SET NAMES ' . $config['charset']);
+            return $db;
+        } catch (PDOException $e) {
+            throw new AfaException($e->getMessage().":".$e->getFile().":".$e->getLine().":".$e->getCode());
+        }
+    }
        
        
 }
