@@ -84,6 +84,7 @@ class codemaker {
         $this->modelstr .= "defined('AFA') or die('No AFA PHP Framework!');\n\n";
         $this->modelstr .= $this->note($this->name.'模型', $this->author, $this->datetime);
         $this->modelstr .= "class {$this->name}_Model extends Model{\n\n";
+        $this->modelstr .= "protected \$module = '{$this->module}';\n";
         $this->modelstr .= "protected \$table = '{$this->table}';\n";
         $this->modelstr .= "protected \$primary = '{$this->prikey}';\n";
         $this->modelstr .= "protected \$fileds = array(\n";

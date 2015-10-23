@@ -11,14 +11,14 @@ class Hello_Controller extends Controller{
     /**
      * hello world
      */
-    public function index(){
+    public function index_Action(){
         echo 'Hello World!';
     }
     
     /**
      * view test
      */
-    public function view(){
+    public function view_Action(){
         $view = new View('view');
         //$view->name = 'it is view function';
         $view->name = 'GIT Test!';
@@ -34,7 +34,7 @@ class Hello_Controller extends Controller{
     /**
      * view test template
      */
-    public function template($name = ''){
+    public function template_Action($name = ''){
         $view = new View('view');
         $view->name = $name?$name:'it is view function';
         $view->value = 'Github update!';
@@ -46,7 +46,7 @@ class Hello_Controller extends Controller{
     /**
      * model test
      */
-    public function model(){
+    public function model_Action(){
         //添加新用户
 //         $user = new User_Model();
 //         $user->account = 'admin';
@@ -68,7 +68,7 @@ class Hello_Controller extends Controller{
     /**
      * sql build test
      */
-    public function sql(){
+    public function sql_Action(){
         
         $sql = new sql('UPDATE');
         

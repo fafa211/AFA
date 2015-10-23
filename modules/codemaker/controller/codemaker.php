@@ -28,21 +28,21 @@ class codemaker_Controller extends Controller{
      */
     public function maker_Action(){
         
-        $module = 'blog';//模型名称
-        $model = 'blog';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
-        $table = 'blog';//表名
-        $prikey = 'id';//主键名
-        
-//         $module = 'user';//模型名称
-//         $model = 'user';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
-//         $table = 'user';//表名
+//         $module = 'blog';//模型名称
+//         $model = 'blog';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
+//         $table = 'blog';//表名
 //         $prikey = 'id';//主键名
+        
+        $module = 'user';//模型名称
+        $model = 'user';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
+        $table = 'user';//表名
+        $prikey = 'id';//主键名
         
 //         $module = 'blog';//模型名称
 //         $model = 'comment';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
 //         $table = 'blog_comments';//表名
 //         $prikey = 'id';//主键名
-        $fileds = array(
+        /**$fileds = array(
             array(
                 'name' => 'title',//字段名称
                 'cnname' => '标题',//字段中文名称(描述)
@@ -133,9 +133,9 @@ class codemaker_Controller extends Controller{
                 'list_show'=>false,
                 'default_value' => '1'
             )
-        );
+        );**/
         
-        /***
+        
         $fileds = array(
             array(
                 'name' => 'account',
@@ -187,7 +187,7 @@ class codemaker_Controller extends Controller{
                 'list_show'=>true,
                 'default_value' => '127.0.0.1'
             )
-        );***/
+        );
         /****
         $fileds = array(
             array(
