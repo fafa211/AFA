@@ -3,14 +3,13 @@
 /**
  * 数据库操作类 db 使用->PDO 接口
  * 支持多个数据库，支持一主多从
- * @author    郑书发
- * @version    2.0
- * @see        https://github.com/fluent/fluent-logger-php
+ * @see        https://github.com/fafa211/AFA-PHP/blob/master/system/class/db.php
  * @author     郑书发 <22575353@qq.com>
+ * @version    2.0
  * @category   db
  * @package    Classes
- * @copyright  Copyright (c) 2015-2020 afa-php.com
- * @license    http://www.myqee.com/license.html
+ * @copyright  Copyright (c) 2015-2020 afaphp.com
+ * @license    http://www.afaphp.com/license.html
  */
 
 class db
@@ -194,14 +193,10 @@ class db
      * @param array $config
      */
     private static function connect($config){
-        try {
-            $dsn = "mysql:host={$config['host']};dbname={$config['dbname']}";
-            $db = new PDO($dsn, $config['user'], $config['password'], array(PDO::ATTR_PERSISTENT => $config['conmode']));
-            $db->exec('SET NAMES ' . $config['charset']);
-            return $db;
-        } catch (PDOException $e) {
-            throw new AfaException($e->getMessage().":".$e->getFile().":".$e->getLine().":".$e->getCode());
-        }
+        $dsn = "mysql:host={$config['host']};dbname={$config['dbname']}";
+        $db = new PDO($dsn, $config['user'], $config['password'], array(PDO::ATTR_PERSISTENT => $config['conmode']));
+        $db->exec('SET NAMES ' . $config['charset']);
+        return $db;
     }
        
        

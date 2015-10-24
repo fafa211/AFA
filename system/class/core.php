@@ -70,14 +70,14 @@ class Request{
                     if (isset($path_vars[3]) && $path_vars[3])
                         $this->params = array_slice($path_vars, 3); // 参数
                 } else {
-                    throw new AfaException("Controller {$this->controller}:{$cFile} not exist! ", E_ERROR);
+                    trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
                 }
             }
             //把路径加入自动载入中
             Load::addModule($this->module, $this->module_dir);
             
         } else {
-            $this->controller = $this->module;
+            $this->controller = $this->module?$this->module:$cController;
             $cFile = CONPATH . $this->controller . EXT;
             if (file_exists($cFile)) {
                 include_once ($cFile);
@@ -85,7 +85,7 @@ class Request{
                 else $this->method = $cMethod;
                 if (isset($path_vars[3]) && $path_vars[3]) $this->params = array_slice($path_vars, 3); // 参数
             } else {
-                throw new AfaException("Controller {$this->controller}:{$cFile} not exist! ", E_ERROR);
+                trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
             }
         }
         
@@ -97,12 +97,8 @@ class Request{
      * @throws AfaException
      */
     public function run(){
-        try {
-            // controller 类的命名规则为：文件名(首字母大写)+'_Controller'
-            $class = new ReflectionClass(ucfirst($this->controller) . '_Controller');
-        } catch (ReflectionException $e) {
-            throw new AfaException($e->getMessage(), $e->getCode());
-        }
+        // controller 类的命名规则为：文件名(首字母大写)+'_Controller'
+        $class = new ReflectionClass(ucfirst($this->controller) . '_Controller');
         
         // Create a new controller instance
         $controller = $class->newInstance($this);
@@ -175,7 +171,7 @@ class Controller {
 	}
 	
 	public function __call($method = '', $params = ''){
-		throw new AfaException("方法 $method 不存在。");
+	    throw new Exception(get_class($this)."控制器类中 不存在 $method 方法。", E_ERROR);
 	}
 	
 	public function before(){
@@ -364,13 +360,13 @@ class View {
 	 */
 	private function set_file($file)
 	{
-		if (file_exists($file))
-            $this->file = $file;
+		if (file_exists($file . EXT))
+            $this->file = $file . EXT;
         else {
             $file = ($this->module_dir ? $this->module_dir : VIEPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
             if (file_exists($file)) {
                 return $this->file = $file;
-            }else throw new AfaException($file. 'is not exit', E_ERROR);
+            }else throw new Exception($file. 'is not exit', E_ERROR);
         }
     }
 
@@ -426,6 +422,108 @@ class View {
 }
 
 /**
+ * 自定义错误处理类,
+ * 可自由修改错误显示页面 view/error.php
+ * @see        https://github.com/fafa211/AFA-PHP/blob/master/system/class/core.php
+ * @author     郑书发 <22575353@qq.com>
+ * @version    1.0
+ * @category   core
+ * @package    Classes
+ * @copyright  Copyright (c) 2015-2020 afaphp.com
+ * @license    http://www.afaphp.com/license.html
+ */
+class AfaException {
+
+    public function __construct()
+    {
+        set_exception_handler(array($this, 'exception_handle'));
+        set_error_handler(array($this, 'error_handle'));
+    }
+
+    public function exception_handle($exception)
+    {
+        $code = $exception->getCode();
+        self::log($code, $exception->getMessage(), $exception->getFile(), $exception->getLine());
+        
+        switch ($code){
+            case E_ERROR:
+            case 1045:
+                $view = new View(VIEPATH.'error');
+                $view->type = '错误';
+                $view->message = $exception->getMessage();
+                $view->file = $exception->getFile();
+                $view->line = $exception->getLine();
+                $view->trace = preg_replace("/\n/", "</p><p>", '<p>'.$exception->getTraceAsString());
+                
+                $view->render();
+                exit(1);
+                break;
+            case E_WARNING:
+                echo "<b>WARNING</b> [$code] {$exception->getMessage()}<br />\n";
+                break;
+            case E_NOTICE:
+                echo "<b>NOTICE</b>: [$code] {$exception->getMessage()}<br />\n";
+                break;
+            default:
+                echo "<b>Unknown error type</b>: [$code] {$exception->getMessage()} <br />\n";
+                break;
+                
+        }
+        return true;
+    }
+
+    public function error_handle($errno, $errstr, $errfile, $errline, $errcontext)
+    {
+        self::log($errno, $errstr, $errfile, $errline);
+        
+        if (! (error_reporting() & $errno)) {
+            // This error code is not included in error_reporting
+            return;
+        }
+        
+        switch ($errno) {
+            case E_USER_ERROR:
+                $view = new View(VIEPATH.'error');
+                $view->type = '错误';
+                $view->message = $errstr;
+                $view->file = $errfile;
+                $view->line = $errline;
+                $view->trace = preg_replace("/\n/", "</p><p>", '<p>'.$errcontext."</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+                
+                $view->render();
+                exit(1);
+                break;
+            
+            case E_USER_WARNING:
+                echo "<b>My WARNING</b> [$errno] $errstr<br />\n";
+                break;
+            
+            case E_USER_NOTICE:
+                echo "<b>My NOTICE</b> [$errno] $errstr<br />\n";
+                break;
+            
+            default:
+                echo "Unknown error type: [$errno] $errstr<br />\n";
+                break;
+        }
+        
+        /* Don't execute PHP internal error handler */
+        return true;
+    }
+
+    public function log($code, $message, $file, $line)
+    {
+        //if(DEBUG) return true;
+        $logfile = PROROOT.DIRECTORY_SEPARATOR.'runtime'.DIRECTORY_SEPARATOR.'log'.DIRECTORY_SEPARATOR.date('Y-m-d').'.php';
+        $logstring = join("\t", array(date('Y-m-d H:i:s'), F::getIp(), $code, $message, $file, $line))."\n";
+        error_log($logstring, 3, $logfile);
+        return true;
+    }
+
+          
+}
+
+/**
  * 自动载入类
  */
 class Load {
@@ -475,11 +573,6 @@ class Load {
         else return include (CLASSPATH . $class_name . EXT);
 	}
 }
-
-/**
-* 设置对象的自动载入
-*/
-spl_autoload_register(array('Load', 'loadClass'));
 
 /**
  * $_GET, $_POST, $_SERVER 控制 HTTP vars
@@ -584,3 +677,12 @@ class input{
 	}
 
 }
+
+//自定义错误处理
+$afaException = new AfaException();
+
+/**
+ * 设置对象的自动载入
+ */
+spl_autoload_register(array('Load', 'loadClass'));
+
