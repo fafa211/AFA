@@ -72,7 +72,7 @@ abstract class Captcha
 			Captcha::$instance = $captcha = new $class($group);
 
 			// Save captcha response at shutdown
-			//register_shutdown_function(array($captcha, 'update_response_session'));
+			register_shutdown_function(array($captcha, 'update_response_session'));
 		}
 
 		return Captcha::$instance;
