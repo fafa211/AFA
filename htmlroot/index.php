@@ -14,6 +14,8 @@ define('DEBUG', true);
 //文件扩展名
 define('EXT', '.php');
 
+define('CHARSET', 'utf8');
+
 //开始时间
 define('AFA_START_TIME', microtime(true));
 //开始内存大小
@@ -40,9 +42,9 @@ define('VIEPATH', APPPATH.'view'.DIRECTORY_SEPARATOR);
 //diver 驱动所在目录
 define('DRIVERPATH',CLASSPATH.'driver'.DIRECTORY_SEPARATOR);
 
-require(CLASSPATH.'core'.EXT);
+require(CLASSPATH.'Core'.EXT);
 require(CLASSPATH.'db.php');
-require(CLASSPATH.'common.php');
+require(CLASSPATH.'F.php');
 
 //声明为全局变量
 global $cModule, $useModule, $modules;
@@ -70,6 +72,8 @@ $modules = array(
 
 //载入配置文件
 require 'config.php';
+//关闭默认错误提示
+ini_set('display_errors', 'off');
 
 //执行请求
 Request::instance()->run();

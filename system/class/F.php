@@ -76,7 +76,18 @@ class F{
         if (isset($GLOBALS['config'][$str])) return $GLOBALS['config'][$str];
         list($main, $sub) = explode('.', $str);
         if (isset($GLOBALS['config'][$main]) && isset($GLOBALS['config'][$main][$sub])) return $GLOBALS['config'][$main][$sub];
-        if (isset($GLOBALS['config'][$main])) return $GLOBALS['config'][$main];
+        if (isset($GLOBALS['config'][$main])) {
+            return $GLOBALS['config'][$main];
+        }else{ 
+            //支持在application下文件夹config设置各自的配置文件
+            $file = APPPATH.'config'.DIRECTORY_SEPARATOR.$main.EXT;
+            if (file_exists($file)) {
+                $GLOBALS['config'][$main] = include $file;
+                if (isset($GLOBALS['config'][$main][$sub])) return $GLOBALS['config'][$main][$sub];
+                return $GLOBALS['config'][$main];
+            }
+        }
+        
         return $GLOBALS['config'];
     }
     
