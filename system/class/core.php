@@ -20,10 +20,10 @@ class Request{
         
         $url = trim($url);
         if ($url == ''){
-            if(isset($_SERVER['PATH_INFO'])) {
+            if(PHP_SAPI == 'cli') {
+                $url = isset($_SERVER['argv'][1])?self::parse($_SERVER['argv'][1]):""; //得到格式一致的路径URL，并设置$_GET
+            } else{
                 $url = $_SERVER['PATH_INFO'];//此路径已被系统默认处理过了
-            } elseif (isset($_SERVER['argc']) && $_SERVER['argc']>1){
-                $url = self::parse($_SERVER['argv'][1]); //得到格式一致的路径URL，并设置$_GET
             }
         }else{
             $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
@@ -434,13 +434,12 @@ class View {
  */
 class AfaException {
 
-    public function __construct()
-    {
-        set_exception_handler(array($this, 'exception_handle'));
-        set_error_handler(array($this, 'error_handle'));
-    }
-
-    public function exception_handle($exception)
+    /**
+     * exception错误处理
+     * @param object $exception
+     * @return boolean
+     */
+    public static function exception_handle($exception)
     {
         $code = $exception->getCode();
         self::log($code, $exception->getMessage(), $exception->getFile(), $exception->getLine());
@@ -472,7 +471,16 @@ class AfaException {
         return true;
     }
 
-    public function error_handle($errno, $errstr, $errfile, $errline, $errcontext)
+    /**
+     * Error错误处理
+     * @param int $errno
+     * @param string $errstr
+     * @param string $errfile
+     * @param int $errline
+     * @param string $errcontext
+     * @return void|boolean
+     */
+    public static function error_handle($errno, $errstr, $errfile, $errline, $errcontext)
     {
         self::log($errno, $errstr, $errfile, $errline);
         
@@ -483,6 +491,8 @@ class AfaException {
         
         switch ($errno) {
             case E_USER_ERROR:
+            case E_PARSE:
+            case E_ERROR:
                 $view = new View(VIEPATH.'error');
                 $view->type = '错误';
                 $view->message = $errstr;
@@ -510,8 +520,17 @@ class AfaException {
         /* Don't execute PHP internal error handler */
         return true;
     }
+    
+    public static function shutdown_handle()
+    {
+        
+        $error = error_get_last();
+        if (!$error || !in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) return ;
+        //调用error_handle
+        self::error_handle($error['type'], $error['message'], $error['file'], $error['line'], '');
+    }
 
-    public function log($code, $message, $file, $line)
+    public static function log($code, $message, $file, $line)
     {
         //if(DEBUG) return true;
         $logfile = PROROOT.DIRECTORY_SEPARATOR.'runtime'.DIRECTORY_SEPARATOR.'log'.DIRECTORY_SEPARATOR.date('Y-m-d').'.php';
@@ -617,9 +636,12 @@ class input{
      */
 	public static function cookie($key = '', $value = '', $time = 3600)
 	{
-		if ($value !== '') {
+		if ($value) {
 			$_COOKIE[$key] = $value;
 			setcookie($key, $value, time() + $time, '/');
+		}elseif ($value === null){
+		    setcookie($key, $value, time() - 24*60*60, '/');
+		    return ;
 		}
 		if ($key) return @$_COOKIE[$key];
 		return $_COOKIE;
@@ -662,9 +684,25 @@ class input{
      * Returns the base URLs of the script
      * base/path/request/query/self
      */
-	public static function uri($key = '')
+	public static function uri($key = '', $value = false, $param = false)
 	{
-		switch ($key){
+		if ($value){
+		    $c = substr($value, 0, 1);
+		    if ('/' === $c) return 'http://'.self::server('HTTP_HOST').$value;
+		    $pos = strrpos(self::server('PATH_INFO'), '/');
+		    $url = substr(self::server('PATH_INFO'), 0, $pos+1).$value;
+		    
+		    if (strpos($url, '?')) return $url;
+		    
+		    $houzui = F::config('suffix');
+		    $url .= $houzui;
+		    
+		    if($param) {
+		        $url .= '?'.self::server('QUERY_STRING');
+		    }
+		    return $url;
+		}
+	    switch ($key){
 			case 'base': {
 				return 'http://'.self::server('HTTP_HOST').'/';
 			}
@@ -679,7 +717,9 @@ class input{
 }
 
 //自定义错误处理
-$afaException = new AfaException();
+set_exception_handler(array('AfaException', 'exception_handle'));
+set_error_handler(array('AfaException', 'error_handle'));
+register_shutdown_function(array('AfaException', 'shutdown_handle'));
 
 /**
  * 设置对象的自动载入
