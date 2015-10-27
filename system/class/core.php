@@ -23,7 +23,7 @@ class Request{
             if(PHP_SAPI == 'cli') {
                 $url = isset($_SERVER['argv'][1])?self::parse($_SERVER['argv'][1]):""; //得到格式一致的路径URL，并设置$_GET
             } else{
-                $url = $_SERVER['PATH_INFO'];//此路径已被系统默认处理过了
+                $url = @$_SERVER['PATH_INFO'];//此路径已被系统默认处理过了
             }
         }else{
             $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
@@ -360,7 +360,8 @@ class View {
 	 */
 	private function set_file($file)
 	{
-		if (file_exists($file . EXT))
+		$c = substr($file, 0, 1);
+	    if ($c == DIRECTORY_SEPARATOR && file_exists($file . EXT))
             $this->file = $file . EXT;
         else {
             $file = ($this->module_dir ? $this->module_dir : VIEPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
@@ -458,13 +459,13 @@ class AfaException {
                 exit(1);
                 break;
             case E_WARNING:
-                echo "<b>WARNING</b> [$code] {$exception->getMessage()}<br />\n";
+                echo "<b>WARNING</b> [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
                 break;
             case E_NOTICE:
-                echo "<b>NOTICE</b>: [$code] {$exception->getMessage()}<br />\n";
+                echo "<b>NOTICE</b>: [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
                 break;
             default:
-                echo "<b>Unknown error type</b>: [$code] {$exception->getMessage()} <br />\n";
+                echo "<b>Unknown error type</b>: [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
                 break;
                 
         }
@@ -505,15 +506,15 @@ class AfaException {
                 break;
             
             case E_USER_WARNING:
-                echo "<b>My WARNING</b> [$errno] $errstr<br />\n";
+                echo "<b>My WARNING</b> [$errno] $errstr $errfile $errline<br />\n";
                 break;
             
             case E_USER_NOTICE:
-                echo "<b>My NOTICE</b> [$errno] $errstr<br />\n";
+                echo "<b>My NOTICE</b> [$errno] $errstr $errfile $errline<br />\n";
                 break;
             
             default:
-                echo "Unknown error type: [$errno] $errstr<br />\n";
+                echo "Unknown error type: [$errno] $errstr $errfile $errline <br />\n";
                 break;
         }
         

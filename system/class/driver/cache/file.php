@@ -463,7 +463,7 @@ class Cache_File extends Cache{
 	{
 		if ( ! mkdir($directory, $mode, $recursive, $context))
 		{
-			throw new Cache_Exception('Failed to create the defined cache directory : :directory', array(':directory' => $directory));
+			throw new Exception('Failed to create the defined cache directory : '.$directory, E_ERROR);
 		}
 		chmod($directory, $mode);
 

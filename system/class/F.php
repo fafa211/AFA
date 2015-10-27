@@ -29,29 +29,67 @@ class F{
     
     /**
      * 手动载入module文件方法
-     * @param string $module: module名称
      * @param string $class_name 类名称
+     * @param string $module: module名称
      */
-    public static function load($module, $class_name){
+    public static function load($class_name, $module = null){
         global $modules;
         if (!isset($modules[$module])) return false;
+        if (class_exists($class_name, false)) return true;
         
         if (strpos($class_name, '_') === false){
-            $file = MODULEPATH.$module.DIRECTORY_SEPARATOR.'helper'.DIRECTORY_SEPARATOR.$class_name.EXT;
-            if (file_exists($file))	return include($file);
+            $file = self::find_file('helper', $class_name, $module);
         }else{
             $lastpos = strrpos($class_name, '_');
             $suffix = substr($class_name, $lastpos+1);
             $file = '';
             $class_name = substr($class_name, 0, $lastpos);
-            if ($suffix == 'Model'){
-                $file = MODULEPATH.$module.DIRECTORY_SEPARATOR.'model'.DIRECTORY_SEPARATOR.strtolower($class_name).EXT;
-            }elseif ($suffix == 'Controller'){
-                $file = MODULEPATH.$module.DIRECTORY_SEPARATOR.'controller'.DIRECTORY_SEPARATOR.strtolower($class_name).EXT;
-            }
-            if ($file && file_exists($file)) return include($file);
+            
+            $file = self::find_file(strtolower($suffix), $class_name, $module);
+        }
+        if ($file) {
+            include($file);
+            return true;
         }
         return false;
+    }
+    
+    /**
+     * 手动载入文件
+     * @param string $type 文件类型
+     * @param string $class 类名称
+     * @param string $module 模块名
+     */
+    public static function find_file($type, $class, $module = NULL){
+        
+        $filename = $class.EXT;
+        
+        switch ($type){
+            case 'helper':
+            case 'controller':
+            case 'model':
+                $dir = ($module?MODULEPATH.$module.DIRECTORY_SEPARATOR:APPPATH).$type.DIRECTORY_SEPARATOR;
+                break;
+            case 'view':
+                $dir = ($module?MODULEPATH.$module.DIRECTORY_SEPARATOR:APPPATH).$type.DIRECTORY_SEPARATOR;
+                if (!file_exists($dir.$filename) && $module){
+                    $dir .= $module.DIRECTORY_SEPARATOR;
+                }
+                break;
+            case 'class':
+                $dir = SYSTEMPATH.$type.DIRECTORY_SEPARATOR;
+                break;
+            case 'config':
+                $dir = APPPATH.$type.DIRECTORY_SEPARATOR;
+                break;
+            case 'driver':
+                $dir = SYSTEMPATH.'class'.DIRECTORY_SEPARATOR.$type.DIRECTORY_SEPARATOR;
+                break;
+            default:
+                return false;
+        }
+        
+        return $dir.$filename;
     }
     
     /**
@@ -62,7 +100,7 @@ class F{
      * @return object 返回一个对象
      */
     public static function object($module, $class_name, $args){
-        $rs = self::load($module, $class_name);
+        $rs = self::load($class_name, $module);
         if($rs === false) exit("Load $class_name failure!");
         $class = new ReflectionClass($class_name);
         return $class->newInstance($args);

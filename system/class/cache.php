@@ -20,19 +20,15 @@ abstract class Cache {
 	 */
 	public static function instance($group = NULL)
 	{
-		// If there is no group supplied
-		$config = & $GLOBALS['config']['cache'];
+		$config = F::config('cache.'.$group);
 		if($group === NULL){
 			$group = $config["driver"];
 		}
-		if ($group === NULL)
-		{
-			// Use the default setting
-			$group = Cache::$default;
-		}
+		
 		$cache_class = 'Cache_'.ucfirst($config['driver']);
 		if(!class_exists($cache_class, false)){
-	   		require(DRIVERPATH.'cache'.DIRECTORY_SEPARATOR.$config["driver"].EXT);
+		    $file = F::find_file('driver', 'cache/'.$config["driver"]);
+	   		$file && include $file;
 		}
 		
 		Cache::$instances[$group] = new $cache_class($config);
@@ -88,7 +84,7 @@ abstract class Cache {
 	 */
 	final public function __clone()
 	{
-		throw new Cache_Exception('Cloning of Kohana_Cache objects is forbidden');
+		throw new Exception('Cloning of Cache objects is forbidden', E_ERROR);
 	}
 
 	/**

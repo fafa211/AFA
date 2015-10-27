@@ -9,7 +9,7 @@
  * @copyright  (c) 2007-2008 Kohana Team
  * @license    http://kohanaphp.com/license.html
  */
-class email {
+class Email {
 	
 	// SwiftMailer instance
 	protected static $mail;
@@ -104,7 +104,7 @@ class email {
 		}
 		
 		// Create the SwiftMailer instance
-		return email::$mail = new Swift ( $connection );
+		return Email::$mail = new Swift ( $connection );
 	}
 	
 	/**
@@ -119,7 +119,7 @@ class email {
 	 */
 	public static function send($to, $from, $subject, $message, $html = FALSE, $swiftfile = null) {
 		// Connect to SwiftMailer
-		(email::$mail === NULL) and email::connect ();
+		(Email::$mail === NULL) and Email::connect ();
 		
 		// Determine the message type
 		$html = ($html === TRUE) ? 'text/html' : 'text/plain';
@@ -173,7 +173,7 @@ class email {
 			$message->attach ( $attachment );
 		}
 		
-		return email::$mail->send ( $message, $recipients, $from );
+		return Email::$mail->send ( $message, $recipients, $from );
 	}
 	
 	/**

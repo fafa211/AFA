@@ -1,4 +1,4 @@
-<?php defined('SYSPATH') or die('No direct script access.');
+<?php 
 
 class Cache_Sqlite extends cache{
 
@@ -18,7 +18,7 @@ class Cache_Sqlite extends cache{
 
 		if ($database === NULL)
 		{
-			throw new Cache_Exception('Database path not available in Kohana Cache configuration');
+			throw new Exception('Database path not available in Kohana Cache configuration');
 		}
 
 		// Load new Sqlite DB
@@ -34,7 +34,7 @@ class Cache_Sqlite extends cache{
 
 			if ($database_schema === NULL)
 			{
-				throw new Cache_Exception('Database schema not found in Kohana Cache configuration');
+				throw new Exception('Database schema not found in Kohana Cache configuration');
 			}
 
 			try
@@ -44,7 +44,7 @@ class Cache_Sqlite extends cache{
 			}
 			catch (PDOException $e)
 			{
-				throw new Cache_Exception('Failed to create new SQLite caches table with the following error : :error', array(':error' => $e->getMessage()));
+				throw new Exception('Failed to create new SQLite caches table with the following error : :error', array(':error' => $e->getMessage()));
 			}
 		}
 	}
@@ -62,7 +62,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		if ( ! $result = $statement->fetch(PDO::FETCH_OBJ))
@@ -113,7 +113,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		return (bool) $statement->rowCount();
@@ -136,7 +136,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		return (bool) $statement->rowCount();
@@ -162,7 +162,7 @@ class Cache_Sqlite extends cache{
 		}
 
 		// Prepare statement
-		// $this->exists() may throw Cache_Exception, no need to catch/rethrow
+		// $this->exists() may throw Exception, no need to catch/rethrow
 		$statement = $this->exists($id) ? $this->_db->prepare('UPDATE caches SET expiration = :expiration, cache = :cache, tags = :tags WHERE id = :id') : $this->_db->prepare('INSERT INTO caches (id, cache, expiration, tags) VALUES (:id, :cache, :expiration, :tags)');
 
 		// Try to insert
@@ -172,7 +172,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		return (bool) $statement->rowCount();
@@ -191,7 +191,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		return (bool) $statement->rowCount();
@@ -213,7 +213,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 
 		$result = array();
@@ -244,7 +244,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOException $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
 		}
 	}
 
@@ -258,7 +258,7 @@ class Cache_Sqlite extends cache{
 		}
 		catch (PDOExeption $e)
 		{
-			throw new Cache_Exception('There was a problem querying the local SQLite3 cache. :error', array(':error' => $e->getMessage()));
+			throw new Exception('There was a problem querying the local SQLite3 cache. '.$e->getMessage());
 		}
 
 		return (bool) $statement->fetchAll();
