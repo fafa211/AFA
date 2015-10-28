@@ -78,7 +78,7 @@ class Request{
             
         } else {
             $this->controller = $this->module?$this->module:$cController;
-            $cFile = CONPATH . $this->controller . EXT;
+            $cFile = APPPATH. 'controller' . DIRECTORY_SEPARATOR. $this->controller . EXT;
             if (file_exists($cFile)) {
                 include_once ($cFile);
                 if (isset($path_vars[2]) && $path_vars[2]) $this->method = $path_vars[2]; // 方法名
@@ -364,7 +364,7 @@ class View {
 	    if ($c == DIRECTORY_SEPARATOR && file_exists($file . EXT))
             $this->file = $file . EXT;
         else {
-            $file = ($this->module_dir ? $this->module_dir : VIEPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
+            $file = ($this->module_dir ? $this->module_dir : APPPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
             if (file_exists($file)) {
                 return $this->file = $file;
             }else throw new Exception($file. 'is not exit', E_ERROR);
@@ -448,7 +448,7 @@ class AfaException {
         switch ($code){
             case E_ERROR:
             case 1045:
-                $view = new View(VIEPATH.'error');
+                $view = new View(APPPATH.'view'.DIRECTORY_SEPARATOR.'error');
                 $view->type = '错误';
                 $view->message = $exception->getMessage();
                 $view->file = $exception->getFile();
@@ -494,7 +494,7 @@ class AfaException {
             case E_USER_ERROR:
             case E_PARSE:
             case E_ERROR:
-                $view = new View(VIEPATH.'error');
+                $view = new View(APPPATH.'view'.DIRECTORY_SEPARATOR.'error');
                 $view->type = '错误';
                 $view->message = $errstr;
                 $view->file = $errfile;

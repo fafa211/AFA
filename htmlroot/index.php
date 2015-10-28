@@ -33,12 +33,6 @@ define('CLASSPATH', SYSTEMPATH.'class'.DIRECTORY_SEPARATOR);
 define('APPPATH', PROROOT.DIRECTORY_SEPARATOR.'application'.DIRECTORY_SEPARATOR);
 //modules 模块所在目录
 define('MODULEPATH', PROROOT.DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR);
-//controller 所在目录
-define('CONPATH', APPPATH.'controller'.DIRECTORY_SEPARATOR);
-//model 所在目录
-define('MODPATH', APPPATH.'model'.DIRECTORY_SEPARATOR);
-//view 所在目录
-define('VIEPATH', APPPATH.'view'.DIRECTORY_SEPARATOR);
 //diver 驱动所在目录
 define('DRIVERPATH',CLASSPATH.'driver'.DIRECTORY_SEPARATOR);
 
@@ -79,14 +73,12 @@ ini_set('display_errors', 'off');
 Request::instance()->run();
 
 if (DEBUG){
-    function convert($size){
-        $unit=array('b','kb','mb','gb','tb','pb');
-        return @round($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
-    }
-    
-    $time = microtime(true) - AFA_START_TIME;
-    $memory = memory_get_usage();
+    $benmark = F::benchmark('end');
     echo '<hr />';
-    echo 'Time:' . round($time, 6) . ' s<br />Memory:start:' . convert(AFA_START_MEMORY).', end:'.convert($memory);
+    echo 'Start: time: '.AFA_START_TIME.' Start Memory: '.F::convert(AFA_START_MEMORY).'<br />';
+    foreach ($benmark as $k=>$v){
+        echo $k.": Time ".$v['time'].' s Memory: '.$v['memory'].'<br />';
+    }
+    echo '<br />';
 }
 ?>
