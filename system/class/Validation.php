@@ -13,7 +13,7 @@ class Validation implements ArrayAccess {
 	 * @param   array   array to use for validation
 	 * @return  Validation
 	 */
-	public static function factory(array $array)
+	public static function instance(array $array)
 	{
 		return new Validation($array);
 	}

@@ -4,7 +4,7 @@
  *
  * @package    class
  * @category   image
- * @author     FROM Kohana Team
+ * @author     shufa.zheng <22575353@qq.com>
  */
 abstract class Image {
 
@@ -47,7 +47,8 @@ abstract class Image {
 
 		// Set the class name
 		$class = 'Image_'.$driver;
-		F::find_file('driver', 'image/'.strtolower($driver));
+		$driver = F::find_file('driver', 'image/'.strtolower($driver));
+        if ($driver) include $driver;
 
 		return new $class($file);
 	}
@@ -83,22 +84,15 @@ abstract class Image {
 	 *
 	 * @param   string   image file path
 	 * @return  void
-	 * @throws  Kohana_Exception
+	 * @throws  Exception
 	 */
 	public function __construct($file)
 	{
-		try
-		{
-			// Get the real path to the file
-			$file = realpath($file);
-
-			// Get the image information
-			$info = getimagesize($file);
-		}
-		catch (Exception $e)
-		{
-			// Ignore all errors while reading the image
-		}
+        // Get the real path to the file
+        $file = realpath($file);
+        
+        // Get the image information
+        $info = getimagesize($file);
 
 		if (empty($file) OR empty($info))
 		{

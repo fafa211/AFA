@@ -12,13 +12,11 @@
  * - [Upload::$remove_spaces]
  * - [Upload::$default_directory]
  *
- * @package    Kohana
- * @category   Helpers
- * @author     Kohana Team
- * @copyright  (c) 2007-2011 Kohana Team
- * @license    http://kohanaframework.org/license
+ * @package    class
+ * @category   upload
+ * @author     FROM Kohana Team
  */
-class Kohana_Upload {
+class Upload {
 
 	/**
 	 * @var  boolean  remove spaces in uploaded files
@@ -29,6 +27,16 @@ class Kohana_Upload {
 	 * @var  string  default upload directory
 	 */
 	public static $default_directory = 'upload';
+
+    /**
+     * @var 图片文件类型
+     */
+    public static $image_types = array(
+        'image/png',
+        'image/jpg',
+        'image/jpeg',
+        'image/gif'
+    );
 
 	/**
 	 * Save an uploaded file to a new location. If no filename is provided,
@@ -59,8 +67,13 @@ class Kohana_Upload {
 
 		if ($filename === NULL)
 		{
-			// Use the default filename, with a timestamp pre-pended
-			$filename = uniqid().$file['name'];
+            // Use the default filename, with a timestamp pre-pended
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (in_array($file['type'], self::$image_types)) {
+                $filename = uniqid('sc_') . '.' . $ext;
+            } else {
+                $filename = uniqid() . $file['name'];
+            }
 		}
 
 		if (Upload::$remove_spaces === TRUE)
@@ -71,16 +84,27 @@ class Kohana_Upload {
 
 		if ($directory === NULL)
 		{
-			// Use the pre-configured upload directory
-			$directory = Upload::$default_directory;
-		}
+            // Use the pre-configured upload directory
+            $config = F::config('upload');
+            if ($config) {
+                $directory = $config['direct'];
+            } else {
+                $directory = DOCROOT . DIRECTORY_SEPARATOR . Upload::$default_directory;
+            }
+        }
+		    
 
 		if ( ! is_dir($directory) OR ! is_writable(realpath($directory)))
 		{
-			throw new Kohana_Exception('Directory :dir must be writable',
-				array(':dir' => Debug::path($directory)));
+			throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
 		}
 
+		$date = date('Ymd');
+        $directory .= DIRECTORY_SEPARATOR . $date;
+        if (! is_dir($directory)) {
+            @mkdir($directory, 0755);
+        }
+		    
 		// Make the filename into a complete path
 		$filename = realpath($directory).DIRECTORY_SEPARATOR.$filename;
 
