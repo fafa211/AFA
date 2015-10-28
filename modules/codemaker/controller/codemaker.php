@@ -42,7 +42,7 @@ class codemaker_Controller extends Controller{
 //         $model = 'comment';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
 //         $table = 'blog_comments';//表名
 //         $prikey = 'id';//主键名
-        /**$fileds = array(
+        /***$fileds = array(
             array(
                 'name' => 'title',//字段名称
                 'cnname' => '标题',//字段中文名称(描述)
@@ -133,7 +133,7 @@ class codemaker_Controller extends Controller{
                 'list_show'=>false,
                 'default_value' => '1'
             )
-        );**/
+        );***/
         
         
         $fileds = array(
@@ -155,7 +155,9 @@ class codemaker_Controller extends Controller{
                 'required'=>true,
                 'is_edit'=>true,
                 'list_show'=>true,
-                'default_value' => '1'
+                'default_value' => '1',
+                'pattern'=>"[0-9a-zA-z]{6,20}",//pattern出现时，title必须配对出现
+                'title'=>"密码必须为数字或字母，长度为6-20位"
             ),
             array(
                 'name' => 'regtime',
@@ -188,6 +190,7 @@ class codemaker_Controller extends Controller{
                 'default_value' => '127.0.0.1'
             )
         );
+        
         /****
         $fileds = array(
             array(

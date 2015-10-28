@@ -34,6 +34,8 @@ class codemaker {
     private $author = 'zhengshufa';
     //是否有上传文件input
     private $has_file = false;
+    //是否有checkbox
+    private $has_checkbox = false;
     //视图相对目录
     private $vdir = "";
     
@@ -129,8 +131,29 @@ class codemaker {
                                 "\${$this->name} = new {$this->name}_Model();\n".
                                 "foreach (\$post as \$k=>\$v){\n".
                                     "\t\${$this->name}->\$k = is_array(\$v)?join(',', \$v):\$v;\n".
-                                "}".
-                                "\${$this->name}->save();\n".
+                                "}";
+                
+                //检查有没有上传文件(即图片)的字段,然后处理
+                $filekeys = array();
+                foreach ($this->fields as $v){
+                    if ($v['type'] == 'file'){
+                        array_push($filekeys, $v['name']);
+                    }
+                }
+                if (!empty($filekeys)){
+                    $this->ctrlstr .= "\$valid = Validation::instance(\$_FILES);\n".
+                                      "\$valid->rule('headpic', 'Upload::type', array(':value', array('jpg', 'png', 'gif')));\n";
+                    $this->ctrlstr .= "if (\$valid->check()){\n";
+                    foreach ($filekeys as $v){
+                        $this->ctrlstr .= "if (\$file = input::file('{$v}')){\n".
+                            "\${$this->name}->{$v} = F::uploadPic(\$file, array(array(600,600)));\n".
+                            "}\n";
+                    }
+                    $this->ctrlstr .="}\n";
+                }
+                //上传文件处理结束
+                
+                $this->ctrlstr .= "\${$this->name}->save();\n".
                                 "\$this->echomsg('新增成功!', 'lists');\n".
                                 "}\n";
                 
@@ -162,8 +185,30 @@ class codemaker {
                     "\$post = input::post();\n".
                     "foreach (\$post as \$k=>\$v){\n".
                     "\t\${$this->name}->\$k = is_array(\$v)?join(',', \$v):\$v;\n".
-                    "}".
-                    "\${$this->name}->save();\n".
+                    "}";
+                
+                //检查有没有上传文件(即图片)的字段,然后处理
+                $filekeys = array();
+                foreach ($this->fields as $v){
+                    if ($v['type'] == 'file'){
+                        array_push($filekeys, $v['name']);
+                    }
+                }
+                if (!empty($filekeys)){
+                    $this->ctrlstr .= "\$valid = Validation::instance(\$_FILES);\n".
+                                      "\$valid->rule('headpic', 'Upload::type', array(':value', array('jpg', 'png', 'gif')));\n";
+                    $this->ctrlstr .= "if (\$valid->check()){\n";
+                    foreach ($filekeys as $v){
+                        $this->ctrlstr .= "if (\$file = input::file('{$v}')){\n".
+                            "\${$this->name}->{$v} = F::uploadPic(\$file, array(array(600,600)));\n".
+                            "}\n";
+                    }
+                    $this->ctrlstr .="}\n";
+                }
+                //上传文件处理结束
+                
+                
+                $this->ctrlstr .= "\${$this->name}->save();\n".
                     "\$this->echomsg('修改成功!', '../lists');\n".
                     "}\n";
                 
@@ -285,7 +330,7 @@ class codemaker {
         $replace = ($this->has_file?"enctype=\"multipart/form-data\"":"");
         $str = str_replace('__enctype__', $replace, $str);
         
-        $str .= $this->checkBoxCheck();
+        $str .= $this->has_checkbox?$this->checkBoxCheck():'';
         
         return $str;
     }
@@ -301,7 +346,7 @@ class codemaker {
         $replace = ($this->has_file?"enctype=\"multipart/form-data\"":"");
         $str = str_replace('__enctype__', $replace, $str);
         
-        $str .= $this->checkBoxCheck();
+        $str .= $this->has_checkbox?$this->checkBoxCheck():'';
         return $str;
     }
     
@@ -374,12 +419,17 @@ class codemaker {
                 $str .= "<label name=\"{$filed['name']}\" for=\"input{$filed['name']}\" class=\"control-label\">{$filed['cnname']}</label>\n";
                 $str .= "<input type=\"{$filed['type']}\" name=\"{$filed['name']}\" class=\"form-control\" id=\"input{$filed['name']}\" placeholder=\"{$filed['cnname']}\" value=\"".($is_edit?"<?php echo \${$this->name}->{$filed['name']};?>":"")."\"";
                 if($filed['required']){ $str .= " required";}
+                if (isset($filed['pattern'])){
+                    $str .= " pattern=\"{$filed['pattern']}\" title=\"{$filed['title']}\"";
+                }
+                
                 $str .= ">\n";
                 $str .= "</div>\n";
                 break;
             case 'file':
                 $str = "<div class=\"form-group\">\n";
                 $str .= "<label name=\"{$filed['name']}\" for=\"input{$filed['name']}\" class=\"control-label\">{$filed['cnname']}</label>\n";
+                $str .= "<img alt=\"{$filed['cnname']}\" src=\"<?php echo \${$this->name}->{$filed['name']};?>\">\n";
                 $str .= "<input type=\"{$filed['type']}\" name=\"{$filed['name']}\" id=\"input{$filed['name']}\"";
                 if($filed['required']){ $str .= " required";}
                 $str .= " />\n";
@@ -413,6 +463,7 @@ class codemaker {
                     $str .= "</label>\n</div>\n";
                 }
                 $str .= "</div>\n";
+                $this->has_checkbox = true;
                 break;
             case 'radio':
                 $str = "<div class=\"form-group\">\n";
