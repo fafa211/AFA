@@ -2,8 +2,8 @@
 
 /**
  * 系统常用静态方法
- * @author zhengshufa
- *
+ * @author zhengshufa <22575353@qq.com>
+ * @copyright afaphp.com
  */
 class F{
     
@@ -228,5 +228,79 @@ class F{
         }
         echo $message;
         if ($exit) exit();
+    }
+    
+    /**
+     * 上传图片到图片服务器
+     * @param array $file : upload file
+     * @param array $arr
+     * @param array $quality 质量，默认90
+     * 单张图片：$arr = array('w'=>120, 'h'=>90); 或 $arr = array(array(120,90); 或 array(120,90);
+     * 大小图片，即两张图片：$arr = array(array(400,300),array(120,90)); array(400,300)为大图宽高，array(120,90)为小图宽高
+     * 大中小图，即三张图片：$arr = array(array(1200,900),array(400,300),array(120,90)); 依次为大中小图的尺寸大小
+     * @return string $url 或 略缩图url
+     * 当为多张图片时，则只返回最小图片,最小图片名称以 s_ 前缀。
+     * 大图以 b_ 前缀
+     * 中图以 m_ 前缀，大图和中图 需要根据小图地址进行转化而得到，如：str_replace('s_','b_', $smallpic);
+     */
+    public static function uploadPic($file, $arr = array(), $quality = 90){
+        $fullfile = Upload::save($file);
+        $image = Image::instance($fullfile);
+        $return_url = '';//返回的url
+        $has_small = false;//是否有略缩图
+        
+        if (isset($arr['w']) || isset($arr['h']) || is_numeric($arr[0])){
+            $width = @$arr['w'] || @$arr[0] || NULL;
+            $height = @$arr['h'] || @$arr[1] || NULL;
+            $image->resize($width, $height)->save(NULL, $quality);
+        }else{
+            $count = count($arr);
+            if (1 == $count){
+                $arr = $arr[0];
+                $image->resize(isset($arr[0])?$arr[0]:null, isset($arr[1])?$arr[1]:null)->save(NULL, $quality);
+            }elseif (2 == $count){
+                $image->resize(@$arr[0][0],@$arr[0][1])->save(str_replace('/sc_', '/b_', $fullfile), $quality);
+                $image->resize(@$arr[1][0],@$arr[1][1])->save(str_replace('/sc_', '/s_', $fullfile), $quality);
+                $has_small = true;
+            }elseif (3 == $count){
+                $image->resize(@$arr[0][0],@$arr[0][1])->save(str_replace('/sc_', '/b_', $fullfile), $quality);
+                $image->resize(@$arr[1][0],@$arr[1][1])->save(str_replace('/sc_', '/m_', $fullfile), $quality);
+                $image->resize(@$arr[2][0],@$arr[2][1])->save(str_replace('/sc_', '/s_', $fullfile), $quality);
+                $has_small = true;
+            }else{
+                return false;
+            }
+        }
+        if ($has_small){
+            $filesmall = str_replace('/sc_', '/s_', $fullfile);
+            $return_url = str_replace(DOCROOT.DIRECTORY_SEPARATOR, F::config('domain'), $filesmall);
+            //删除原图
+            unlink($fullfile);
+        }else{
+            $return_url = str_replace(DOCROOT.DIRECTORY_SEPARATOR, F::config('domain'), $fullfile);
+        }
+        return $return_url;
+    }
+    
+    /**
+     * 记录运行时的时间点
+     */
+    public static function benchmark($mark = ''){
+        static $bencharr;
+        
+        if (empty($bencharr)){
+            $bencharr = array();
+        }
+        if ($mark){
+            $bencharr[$mark] = array('time'=>round(microtime(true)-AFA_START_TIME, 6), 'memory'=>F::convert(memory_get_usage()));
+        }else{
+            array_push($bencharr, array('time'=>round(microtime(true)-AFA_START_TIME, 6), 'memory'=>F::convert(memory_get_usage())));
+        }
+        return $bencharr;
+    } 
+    
+    public static function convert($size){
+        $unit=array('b','kb','mb','gb','tb','pb');
+        return @round($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
     }
 }
