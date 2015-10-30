@@ -595,7 +595,7 @@ class Load {
 			$file = '';
 			$class_name = substr($class_name, 0, $lastpos);
 			
-			if ($suffix == 'Model'){
+			if ($suffix == 'Model' || $suffix = 'Controller'){
 			    return self::loadModule($class_name, strtolower($suffix));
 			}
 		}
@@ -621,7 +621,13 @@ class Load {
 	    }
 	    $file = APPPATH . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
         if (file_exists($file)) return include ($file);
-        else return include (CLASSPATH . $class_name . EXT);
+        else {
+            if($type == 'controller' && strpos($class_name, '_') !== false){
+                list($classfile, $subdir) = explode('_', $class_name);
+                return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. $classfile. EXT;   
+            }
+            return include (CLASSPATH . $class_name . EXT);
+        }
 	}
 }
 
