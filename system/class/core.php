@@ -11,6 +11,10 @@ class Request{
     public $params = array();
     //模型路径
     public $module_dir = '';
+    //当前URL
+    public $url = '';
+    //URL目录,方便同一控制器中使用
+    public $url_pre = '';
     
     public static function instance($url = ''){
         return new self($url);
@@ -32,8 +36,11 @@ class Request{
         if(F::config('suffix')) {
             $url = str_replace(F::config('suffix'), '', $url);
         }
+        $this->url = $url;
         
         global $modules, $cModule, $cController, $cMethod;
+        $this->controller = $cController;
+        $this->method = $cMethod;
         
         $path_vars = explode('/', $url);
         
@@ -45,32 +52,38 @@ class Request{
         
         if(isset($path_vars[2]) && $path_vars[2])  {
             $this->controller = $path_vars[2];
-        }else {
-            $this->controller = $cController;
         }
 
         if ($this->module && isset($modules[$this->module])) {
-            $this->module_dir = $modules[$this->module];
-            $cFile = $this->module_dir . 'controller' . DIRECTORY_SEPARATOR . $this->controller . EXT;
+            $this->module_dir = MODULEPATH.$this->module.DIRECTORY_SEPARATOR;
+            //控制器所在目录
+            $conpath = $this->module_dir.'controller'.DIRECTORY_SEPARATOR;
+            //查找module/模块名/controller/控制器名.php 文件
+            $cFile = $conpath.$this->controller.EXT;
             
             if (file_exists($cFile)) {
-                include_once ($cFile);
-                if (isset($path_vars[3]) && $path_vars[3]) $this->method = $path_vars[3]; // 参数
-                else $this->method = $cMethod;
-                if (isset($path_vars[4]) && $path_vars[4])
-                    $this->params = array_slice($path_vars, 4); // 参数
+                $this->url_pre = $this->module.'/'.$this->controller.'/';
+                $this->method = @$path_vars[3]?@$path_vars[3]:$this->method;
+                $this->params = @$path_vars[4]?array_slice($path_vars, 4):$this->params;
             } else {
-                // 方法名
-                $cFile = $this->module_dir . 'controller' . DIRECTORY_SEPARATOR . $this->module . EXT;
-                if (file_exists($cFile)) {
-                    include_once ($cFile);
-                    $this->controller = $this->module;
-                    if (isset($path_vars[2]) && $path_vars[2]) $this->method = $path_vars[2]; // 方法名
-                    else $this->method = $cMethod;
-                    if (isset($path_vars[3]) && $path_vars[3])
-                        $this->params = array_slice($path_vars, 3); // 参数
-                } else {
-                    trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+                $confile = @$path_vars[3]?@$path_vars[3]:$cController;
+                //查找module/模块名/controller/子文件夹/控制器名.php 文件
+                $cFile = $conpath.$this->controller.DIRECTORY_SEPARATOR.$confile.EXT;
+                if(file_exists($cFile)){
+                    $this->url_pre = $this->module.'/'.$this->controller.'/'.$confile.'/';
+                    $this->controller = $confile.'_'.ucfirst($this->controller);
+                    $this->method = @$path_vars[4]?@$path_vars[4]:$this->method;
+                    $this->params = @$path_vars[5]?array_slice($path_vars, 5):$this->params;
+                }else {
+                    //查找module/模块名/controller/模块名.php 文件
+                    $cFile = $conpath.$this->module.EXT;
+                    if (file_exists($cFile)){
+                        $this->url_pre = $this->module.'/';
+                        $this->controller = $this->module;
+                        $this->method = @$path_vars[2]?@$path_vars[2]:$this->method;
+                        $this->params = @$path_vars[3]?array_slice($path_vars, 3):$this->params;
+                    }else 
+                        trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
                 }
             }
             //把路径加入自动载入中
@@ -78,16 +91,33 @@ class Request{
             
         } else {
             $this->controller = $this->module?$this->module:$cController;
-            $cFile = APPPATH. 'controller' . DIRECTORY_SEPARATOR. $this->controller . EXT;
+            $conpath = APPPATH.'controller'.DIRECTORY_SEPARATOR;
+            //查找application/controller/控制器名.php 文件
+            $cFile = $conpath.$this->controller.EXT;
+            
             if (file_exists($cFile)) {
-                include_once ($cFile);
-                if (isset($path_vars[2]) && $path_vars[2]) $this->method = $path_vars[2]; // 方法名
-                else $this->method = $cMethod;
-                if (isset($path_vars[3]) && $path_vars[3]) $this->params = array_slice($path_vars, 3); // 参数
+                $this->url_pre = $this->controller.'/';
+                $this->method = @$path_vars[2]?@$path_vars[2]:$this->method;
+                $this->params = @$path_vars[3]?array_slice($path_vars, 3):$this->params;
             } else {
-                trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+                $confile = @$path_vars[2]?@$path_vars[2]:$cController;
+                //查找application/controller/子文件夹/控制器名.php 文件
+                $cFile = $conpath.$this->controller.DIRECTORY_SEPARATOR.$confile.EXT;
+                if(file_exists($cFile)){
+                    $this->url_pre = $this->controller.'/'.$confile.'/';
+                    $this->controller = $confile.'_'.ucfirst($this->controller);
+                    $this->method = @$path_vars[3]?@$path_vars[3]:$this->method;
+                    $this->params = @$path_vars[4]?array_slice($path_vars, 4):$this->params;
+                }else {
+                    trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+                }
             }
         }
+        
+        $this->url_pre = '/'.$this->url_pre;
+        
+        //载入控制器文件
+        require_once $cFile;
         
         return $this;
     }
@@ -105,9 +135,6 @@ class Request{
         try {
             // Load the controller method
             $method = $class->getMethod($this->method.'_Action');
-            if ($method->isProtected() or $method->isPrivate()) {
-                common::go404('protected controller method');
-            }
         } catch (ReflectionException $e) {
             // Use __call instead
             $method = $class->getMethod('__call');
@@ -147,6 +174,10 @@ class Request{
         $first_word = substr($url_arr['path'], 0, 1);
         
         return $first_word == '/'?$url_arr['path']:'/'.$url_arr['path'];
+    }
+    
+    public function __get($key){
+        return $this->$key;
     }
 
 }
@@ -564,7 +595,7 @@ class Load {
 			$file = '';
 			$class_name = substr($class_name, 0, $lastpos);
 			
-			if ($suffix == 'Model' || $suffix == 'Controller'){
+			if ($suffix == 'Model' || $suffix = 'Controller'){
 			    return self::loadModule($class_name, strtolower($suffix));
 			}
 		}
@@ -590,7 +621,13 @@ class Load {
 	    }
 	    $file = APPPATH . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
         if (file_exists($file)) return include ($file);
-        else return include (CLASSPATH . $class_name . EXT);
+        else {
+            if($type == 'controller' && strpos($class_name, '_') !== false){
+                list($classfile, $subdir) = explode('_', $class_name);
+                return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. $classfile. EXT;   
+            }
+            return include (CLASSPATH . $class_name . EXT);
+        }
 	}
 }
 
