@@ -7,6 +7,15 @@ $config['domain'] = "http://www.afa.com/";
 //后缀，静态化使用,只能是 .html, .shtml, .php等常用脚本后缀，否则很容易出问题
 $config['suffix'] = '.html';
 
+//session配置
+$config['session'] = array(
+    'native'=>array(
+        'name'=>'ssid',
+        'lifetime'=>3600,
+        'encrypted'=>false,
+    )
+);
+
 //分页设置
 $config['page'] = array(
     'psize' => 10, // 每页显示的记录数
