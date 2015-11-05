@@ -112,7 +112,12 @@ class F{
     public static function config($str)
     {
         if (isset($GLOBALS['config'][$str])) return $GLOBALS['config'][$str];
-        list($main, $sub) = explode('.', $str);
+        if (strpos($str, '.') === false){
+            $main = $str;
+            $sub = null;
+        }else {
+            list($main, $sub) = explode('.', $str);
+        }
         if (isset($GLOBALS['config'][$main]) && isset($GLOBALS['config'][$main][$sub])) return $GLOBALS['config'][$main][$sub];
         if (isset($GLOBALS['config'][$main])) {
             return $GLOBALS['config'][$main];
