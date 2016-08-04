@@ -11,6 +11,9 @@ define('VERSION', '0.1');
 //调试状态, 为上线产品时请设置为 false
 define('DEBUG', true);
 
+//打开代码提示
+ini_set('display_errors', 'on');
+
 //文件扩展名
 define('EXT', '.php');
 
@@ -36,7 +39,7 @@ define('MODULEPATH', PROROOT.DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR);
 //diver 驱动所在目录
 define('DRIVERPATH',CLASSPATH.'driver'.DIRECTORY_SEPARATOR);
 
-require(CLASSPATH.'Core'.EXT);
+require(CLASSPATH.'core'.EXT);
 require(CLASSPATH.'db.php');
 require(CLASSPATH.'F.php');
 
@@ -58,16 +61,19 @@ $cParams    = array();
  * 打开的模块设置
  */
 $modules = array(
-    'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
-    'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
     'codemaker' => MODULEPATH.'codemaker'.DIRECTORY_SEPARATOR,//生成模块代码，正式生产环境下请删除此行
+    //'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
+    //'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
+    //'idcarea' => MODULEPATH.'idcarea'.DIRECTORY_SEPARATOR,
+    //'iparea' => MODULEPATH.'iparea'.DIRECTORY_SEPARATOR,
+    //'man' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
+    //'phonearea' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
+
 
 );
 
 //载入配置文件
 require 'config.php';
-//关闭默认错误提示
-ini_set('display_errors', 'off');
 
 //执行请求
 Request::instance()->run();
