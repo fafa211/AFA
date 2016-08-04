@@ -213,8 +213,20 @@ class Controller {
 	     
 	}
 	
-	public function echojson(){
-	    
+	public function echojson($data, $format = 'json'){
+
+        header("Content-type:text/html;charset=utf-8");
+
+        if('json' == $format){
+            echo json_encode($data);
+        }elseif('jsonp' == $format){
+            $fun = input::get('callback');
+            echo $fun.'('.json_encode($data).')';
+        }else{
+            echo $data;
+        }
+
+        exit();
 	}
 	
 	public function echomsg($message, $url = false, $exit = false){
@@ -236,6 +248,15 @@ class Controller {
 	    echo $message;
 	    exit;
 	}
+
+    /**
+     * 查看接口手册
+     * @param $api 接口名称
+     * @return bool true
+     */
+    public function man_Action($api = ''){
+        return docparse::apiParse($this->request->controller.'_Controller', $api);
+    }
 	
 }
 
@@ -245,7 +266,7 @@ class Controller {
  */
 class Model {
 	//数据库链接对象
-	public $db;
+    protected $db;
 	//数据表名称
 	protected $table;
 	//模块名称
@@ -286,7 +307,7 @@ class Model {
 	        $insert = true;
 	        $sql = sql::insert($fieldsArr, $this->table);
 	    }
-	    
+
 	    $flag = $this->db->exec($sql);
 	    if ($flag && $insert){
 	        //插入数据后更新当前数据的ID
@@ -294,6 +315,22 @@ class Model {
 	    }
 	    return $flag;
 	}
+
+    /**
+     * 插入  ORM, 主键值非自增时使用此方法插入数据
+     * @return Ambigous <boolean, number>
+     */
+    public function insert(){
+        $fieldsArr = array();
+        foreach ($this->fileds as $f=>$v){
+            $fieldsArr[$f] = isset($this->$f)?$this->$f:$v;
+        }
+
+        $sql = sql::insert($fieldsArr, $this->table);
+        $flag = $this->db->exec($sql);
+
+        return $flag;
+    }
 	
 	/**
 	 * 删除 ORM
@@ -327,6 +364,7 @@ class Model {
 	public function __set($name, $value){
 	    $this->$name = $value;
 	}
+
 }
 
 /**

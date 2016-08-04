@@ -214,11 +214,13 @@ class common{
 	 * @param string:$url: 请求接口地址
 	 * @param $params:string/array 参数
 	 * @param $post: bool:是否使用post提交
+	 * @param $headers: array:请求头信息
+	 * @return string 请求结果
 	 */
-	public static function curlExec($url, $params, $post = false){
+	public static function curlExec($url, $params, $post = false, $headers = array()){
 		$ch = curl_init( );
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-		if (substr($url, 0, 7) == 'http://'){
+		if (substr($url, 0, 7) == 'http://' || substr($url, 0, 8) == 'https://'){
 			curl_setopt( $ch, CURLOPT_URL, $url );
 		}else {
 			curl_setopt( $ch, CURLOPT_URL, input::uri('base').$url );
@@ -233,7 +235,10 @@ class common{
 			}
 			curl_setopt( $ch, CURLOPT_POSTFIELDS, join('&', $tempArr) );
 		}
-		curl_setopt( $ch, CURLOPT_TIMEOUT, 600 );
+		if(!empty($headers)){
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		}
+		curl_setopt( $ch, CURLOPT_TIMEOUT, 10 );
 		ob_start( );
 		curl_exec( $ch );
 		$contents = ob_get_contents( );
