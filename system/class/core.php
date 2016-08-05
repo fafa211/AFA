@@ -255,7 +255,13 @@ class Controller {
      * @return bool true
      */
     public function man_Action($api = ''){
-        return docparse::apiParse($this->request->controller.'_Controller', $api);
+        global $modules;
+        if(!isset($modules['man'])){
+            return $this->echo404('man 手册模块未开启.');
+        }
+
+        $path_url = '/man/api/'.$this->request->controller.($api?'/'.$api:'');
+        Request::instance($path_url)->run();
     }
 	
 }

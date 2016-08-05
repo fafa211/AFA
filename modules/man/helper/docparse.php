@@ -29,6 +29,10 @@ class docparse
         return self::$p;
     }
 
+    /**
+     * @param string $doc 反射得到的类或方法注释内容
+     * @return array 解析结果
+     */
     public function parse($doc = '')
     {
         if ($doc == '') {
@@ -60,8 +64,6 @@ class docparse
         $parase_result = docparse::getInstance(false)->parse($doc);
         $class_metadata = $parase_result;
 
-        header("Content-type:text/html;charset=utf-8");
-
         //获取类中的方法，设置获取public,protected类型方法
         if($api) {
             $method = $reflection->getMethod($api . '_Action');
@@ -69,6 +71,9 @@ class docparse
         }else{
             $methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
         }
+
+        $retData = array();
+        $data = array();
 
         //遍历所有的方法
         foreach ($methods as $method) {
@@ -98,35 +103,39 @@ class docparse
                 $position++;
             }
 
+            $data['class_name']     = $class_name;
+
             $api_name = '/'.str_replace('_Controller', '', $class_name).'/'.str_replace('_Action', '', $method->getName());
-            echo '<b>接口名称</b>: '.$api_name.'<br />';
-            echo '<b>接口说明</b>: '.(isset($metadata['long_description'])?$metadata['long_description']:$metadata['description']).'<br />';
+            $data['api_name']    = $api_name;//接口名称
+            $data['api_description']    = (isset($metadata['long_description'])?$metadata['long_description']:@$metadata['description']);
 
-            $path_url = '<b>接口访问路径</b>: ';
-            $path_url .= F::config('domain').substr($api_name, 1);
+            $path_url = F::config('domain').substr($api_name, 1);
 
-            $param_str = '<b>接口参数</b>:';
+            $param_arr = array();
+
             $param_count = count($params);
             if($param_count) {
-                $param_str .= "共计 ".$param_count."个参数,具体如下: <br/>";
-
                 foreach ($arguments as $k => $pos) {
-                    $param_str .= "第" . ($pos+1) . "个参数为:  " . $k . ",";
-                    $param_str .= " 默认值为: ".($defaults[$pos]?$defaults[$pos]:"无"). ',说明: '.($param_count==1?$metadata['param']:$metadata['param'][$pos])."<br/>";
-
+                    $param_arr[$pos] = array(
+                        'name' => $k,
+                        'default' => ($defaults[$pos] ? $defaults[$pos] : "无"),
+                        'description' => ($param_count == 1 ? @$metadata['param'] : @$metadata['param'][$pos])
+                    );
                     $path_url .= '/'.$k;
                 }
-
-            }else{
-                $param_str .= '无<br />';
             }
-            echo $path_url.'<br />';
-            echo $param_str;
 
-            echo '<b>接口返回值</b>:'.(isset($metadata['return'])?$metadata['return']:'无').'<hr>';
+            $data['param_count'] = $param_count;
+            $data['param_arr'] = $param_arr;
+
+            $data['path_url']  = $path_url;
+            $data['return'] = (isset($metadata['return'])?$metadata['return']:'无');
+
+            array_push($retData, $data);
 
         }
-        return true;
+
+        return $retData;
 
     }
 
@@ -135,7 +144,7 @@ class docparse
      * system/model/controller/other 类方法文档解析
      * @param string $class_name 类名称
      * @param string $method 方法名称
-     * @return bool true
+     * @return array 解析结果
      */
     public static function methodParse($class_name, $method = ''){
         $isController = stripos($class_name, '_Controller');
@@ -149,15 +158,15 @@ class docparse
         //$parase_result = docparse::getInstance(false)->parse($doc);
         //$class_metadata = $parase_result;
 
-
-        header("Content-type:text/html;charset=utf-8");
-
         if($method) {
             $method = $reflection->getMethod($method);
             $methods = array($method);
         }else{
             $methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC|ReflectionMethod::IS_PROTECTED|ReflectionMethod::IS_PRIVATE);
         }
+
+        $retData = array();
+        $data = array();
 
         //遍历所有的方法
         foreach ($methods as $method) {
@@ -168,9 +177,7 @@ class docparse
             $doc = $method->getDocComment();
 
             //解析注释
-            $info = docparse::getInstance(false)->parse($doc);
-
-            $metadata =  $info;
+            $metadata = docparse::getInstance(false)->parse($doc);
 
             //获取方法的参数
             $params = $method->getParameters();
@@ -185,33 +192,37 @@ class docparse
                 $position++;
             }
 
-            echo '<b>类名称</b>: '.$class_name.'<br />';
-            echo '<b>方法名称</b>: '.$method_name.'<br />';
-            echo '<b>方法说明</b>: '.(isset($metadata['long_description'])?$metadata['long_description']:$metadata['description']).'<br />';
-            echo '<b>文件路径</b>: '.str_replace(PROROOT, '', $reflection->getFileName()).'<br>方法所在起始行号: '.$method->getStartLine().'<br />';
-            echo '<b>方法属性</b>: '.($method->isStatic()?'静态方法':($method->isPublic()?'公有方法':($method->isProtected()?'保护方法':'私有方法'))).'<br />';
+            $data['class_name']     = $class_name;
+            $data['method_name']    = $method_name;
+            $data['method_description']    = (isset($metadata['long_description'])?$metadata['long_description']:@$metadata['description']);
 
-            $param_str = '<b>方法参数</b>:';
+            $data['file_name']  = str_replace(PROROOT, '', $reflection->getFileName());
+            $data['start_line'] = $method->getStartLine();
+
+            $data['method_type'] = $method->isStatic()?'静态方法':($method->isPublic()?'公有方法':($method->isProtected()?'保护方法':'私有方法'));
+
+            $param_arr = array();
+
             $param_count = count($params);
             if($param_count) {
-                $param_str .= "共计 ".$param_count."个参数,具体如下: <br/>";
-
                 foreach ($arguments as $k => $pos) {
-                    $param_str .= "第" . ($pos+1) . "个参数为:  " . $k . ",";
-                    $param_str .= " 默认值为: ".($defaults[$pos]?$defaults[$pos]:"无"). ',说明: '
-                        .($param_count==1?$metadata['param']:
-                            $metadata['param'][$pos])."<br/>";
+                    $param_arr[$pos] = array(
+                        'name' => $k,
+                        'default' => ($defaults[$pos] ? $defaults[$pos] : "无"),
+                        'description' => ($param_count == 1 ? @$metadata['param'] : @$metadata['param'][$pos])
+                    );
                 }
-
-            }else{
-                $param_str .= '无<br />';
             }
-            echo $param_str;
 
-            echo '<b>方法返回值</b>:'.(isset($metadata['return'])?$metadata['return']:'无').'<hr>';
+            $data['param_count'] = $param_count;
+            $data['param_arr'] = $param_arr;
 
+            $data['return'] = (isset($metadata['return'])?$metadata['return']:'无');
+
+            array_push($retData, $data);
         }
-        return true;
+
+        return $retData;
 
     }
 
