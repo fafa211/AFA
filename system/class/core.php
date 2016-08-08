@@ -151,6 +151,8 @@ class Request{
         
         $after = $class->getMethod('after');
         $after->invokeArgs($controller, $this->params);
+
+        return $this;
     }
     
     /**
@@ -226,7 +228,7 @@ class Controller {
             echo $data;
         }
 
-        exit();
+        return true;
 	}
 	
 	public function echomsg($message, $url = false, $exit = false){
@@ -263,7 +265,17 @@ class Controller {
         $path_url = '/man/api/'.$this->request->controller.($api?'/'.$api:'');
         Request::instance($path_url)->run();
     }
-	
+
+    public function __set($name, $value)
+    {
+        $this->$name = $value;
+    }
+
+    public function __get($name)
+    {
+        return @$this->$name;
+    }
+
 }
 
 /**

@@ -6,10 +6,10 @@
 define('AFA', true);
 
 //版本号
-define('VERSION', '0.1');
+define('VERSION', '1.0');
 
-//调试状态, 为上线产品时请设置为 false
-define('DEBUG', true);
+//调试状态, 0 不输出调试信息, 1输出到页面, 2输出到文件
+define('DEBUG', 2);
 
 //打开代码提示
 ini_set('display_errors', 'on');
@@ -64,10 +64,10 @@ $modules = array(
     'codemaker' => MODULEPATH.'codemaker'.DIRECTORY_SEPARATOR,//生成模块代码，正式生产环境下请删除此行
     //'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
     //'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
-    //'idcarea' => MODULEPATH.'idcarea'.DIRECTORY_SEPARATOR,
-    //'iparea' => MODULEPATH.'iparea'.DIRECTORY_SEPARATOR,
-    //'man' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
-    //'phonearea' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
+    'idcarea' => MODULEPATH.'idcarea'.DIRECTORY_SEPARATOR,
+    'iparea' => MODULEPATH.'iparea'.DIRECTORY_SEPARATOR,
+    'man' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
+    'phonearea' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
 
 
 );
@@ -76,15 +76,9 @@ $modules = array(
 require 'config.php';
 
 //执行请求
-Request::instance()->run();
+$request = Request::instance()->run();
 
-if (DEBUG){
-    $benmark = F::benchmark('end');
-    echo '<hr />';
-    echo 'Start: time: '.AFA_START_TIME.' Start Memory: '.F::convert(AFA_START_MEMORY).'<br />';
-    foreach ($benmark as $k=>$v){
-        echo $k.": Time ".$v['time'].' s Memory: '.$v['memory'].'<br />';
-    }
-    echo '<br />';
-}
+//输出性能调试信息
+F::debug($request);
+
 ?>
