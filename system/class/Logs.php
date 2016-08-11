@@ -37,9 +37,13 @@ class Logs{
      * @abstract 初始化
      * @param String $dir 文件路径
      * @param String $filename 文件名
+     * @param String $priority 权限码
+     * @param int $maxlogfilenum 最大日志文件数量
+     * @param int $rotatype 轮训类型
+     * @param int $rotaparam 日志记录最大数量
      * @return 
      */
-    function Logs($dir, $filename, $priority = Logs::INFO, $maxlogfilenum = 3, $rotatype = 1, $rotaparam = 5000000)
+    public function Logs($dir, $filename, $priority = Logs::INFO, $maxlogfilenum = 3, $rotatype = 1, $rotaparam = 5000000)
     {
         $dot_offset = strpos($filename, ".");
         if ($dot_offset !== false)
@@ -137,7 +141,7 @@ class Logs{
         //}
         /** OLD CODES END **/
     	if(!@fwrite($handle, $logContent."\n")){
-            //echo("写入日志失败");
+            echo("写入日志失败");
         }
         @fclose($handle);
         $this->RotaLog();
@@ -233,11 +237,12 @@ S;
     }
 	
 	/**
-	 * @abstract 读取日志文件内容
+	 * 读取日志文件内容
 	 * @param String $filepath  文件完整路径
 	 * @param number $num 日志读取条数，  时间从新到旧
 	 * @param number $length 每行的最大长度值，单位：字节； 设置了可以让程序更高效，默认1024
 	 * @author zhengshufa
+     * @return MAX bool/string
 	 */
 	static function readLogs($filepath, $num = 10, $length = 1024) {
 		if (!file_exists($filepath)) return false;

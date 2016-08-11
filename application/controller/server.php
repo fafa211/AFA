@@ -25,6 +25,10 @@ class Server_Controller extends Controller
      * 执行前的准备与日志记录
      */
     public function before(){
+
+        //忽略man方法
+        if('man' == $this->request->method)  return;
+
         //客户端IP地址
         $this->client_ip = common::getIp();
         //接口调用唯一标识ID
@@ -42,7 +46,7 @@ class Server_Controller extends Controller
             'get_params' => input::get(),
             'post_parms' => input::post()
         );
-        $logContent = json_encode($logContent);
+        $logContent = F::json_encode($logContent);
         $logs->LogInfo($logContent);
 
     }
@@ -52,6 +56,9 @@ class Server_Controller extends Controller
      */
     public function after(){
 
+        //忽略man方法
+        if('man' == $this->request->method)  return;
+
         $logs = new Logs(self::$log_path, date('Y-m-d') . '.log');
 
         $logContent = array(
@@ -59,7 +66,7 @@ class Server_Controller extends Controller
             'log_time'=>date('Y-m-d H:i:s'),
             'return'=>$this->ret
         );
-        $logContent = json_encode($logContent);
+        $logContent = F::json_encode($logContent);
         $logs->LogInfo($logContent);
 
     }

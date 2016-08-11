@@ -220,10 +220,10 @@ class Controller {
         header("Content-type:text/html;charset=utf-8");
 
         if('json' == $format){
-            echo json_encode($data);
+            echo F::json_encode($data);
         }elseif('jsonp' == $format){
             $fun = input::get('callback');
-            echo $fun.'('.json_encode($data).')';
+            echo $fun.'('.F::json_encode($data).')';
         }else{
             echo $data;
         }
@@ -648,7 +648,7 @@ class Load {
 		}else{
 			$lastpos = strrpos($class_name, '_');
 			$suffix = substr($class_name, $lastpos+1);
-			$file = '';
+
 			$class_name = substr($class_name, 0, $lastpos);
 			
 			if ($suffix == 'Model' || $suffix = 'Controller'){
@@ -669,21 +669,21 @@ class Load {
 	 * @param string $type
 	 */
 	public static function loadModule($class_name, $type = 'model'){
+
 	    if(!empty(self::$modules)){
 	        foreach (self::$modules as $module => $dir) {
 	            $file = $dir . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
 	            if (file_exists($file)) return include ($file);
 	        }
 	    }
-	    $file = APPPATH . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
+        $file = APPPATH . $type . DIRECTORY_SEPARATOR . lcfirst($class_name) . EXT;
         if (file_exists($file)) return include ($file);
-        else {
-            if($type == 'controller' && strpos($class_name, '_') !== false){
-                list($classfile, $subdir) = explode('_', $class_name);
-                return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. $classfile. EXT;   
-            }
-            return include (CLASSPATH . $class_name . EXT);
+
+        if($type == 'controller' && strpos($class_name, '_') !== false){
+            list($classfile, $subdir) = explode('_', $class_name);
+            return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. lcfirst($classfile). EXT;
         }
+        return include (CLASSPATH . $class_name . EXT);
 	}
 }
 
