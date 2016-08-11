@@ -61,8 +61,8 @@ class docparse
         $reflection = new ReflectionClass($class_name);
         //通过反射获取类的注释
         $doc = $reflection->getDocComment();
-        $parase_result = docparse::getInstance(false)->parse($doc);
-        $class_metadata = $parase_result;
+        //$parase_result = docparse::getInstance(false)->parse($doc);
+        //$class_metadata = $parase_result;
 
         //获取类中的方法，设置获取public,protected类型方法
         if($api) {
@@ -228,7 +228,44 @@ class docparse
 
     private function parseLines($lines)
     {
-        foreach ($lines as $line) {
+        $real_lines = array();
+        $current_line = '';
+        $last_line = count($lines)-1;
+
+        foreach ($lines as $k=>$line) {
+
+            $line = trim($line);
+
+            if (empty ($line)) {
+                //最后一行
+                if($last_line == $k){
+                    array_push($real_lines, $current_line);
+                }
+                continue;
+            }
+
+            if (strpos($line, '@') === false) {
+                if(empty($current_line)) {
+                    $current_line = $line;
+                }else{
+                    $current_line .= '<br />'.$line;
+                }
+
+            } elseif(strpos($line, '@') === 0) {
+
+                if(!empty($current_line)){
+                    array_push($real_lines, $current_line);
+                    $current_line = '';
+                }
+                $current_line = $line;
+            }
+            //最后一行
+            if($last_line == $k){
+                array_push($real_lines, $current_line);
+            }
+        }
+
+        foreach ($real_lines as $line) {
             $parsedLine = $this->parseLine($line); // Parse the line
 
             if ($parsedLine === false && !isset ($this->params ['description'])) {

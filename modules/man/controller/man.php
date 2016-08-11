@@ -5,7 +5,7 @@
  * @author zhengshufa
  * @date 2016-08-02 15:20:55
  */
-class man_Controller extends Controller
+class Man_Controller extends Controller
 {
 
     private $vdir = '';
