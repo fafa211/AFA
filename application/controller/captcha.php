@@ -5,7 +5,7 @@
  * 
  */
 
-class captcha_Controller extends Controller{
+class Captcha_Controller extends Controller{
 
     public function index_Action(){
     
