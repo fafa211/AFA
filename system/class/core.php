@@ -144,8 +144,12 @@ class Request{
         }
         
         $before = $class->getMethod('before');
-        $before->invokeArgs($controller, $this->params);
-        
+        $result = $before->invokeArgs($controller, $this->params);
+        if($result === false){
+            //before可作为拦截器,当返回值为false, 目标 action, after 方法都不会执行
+            return $this;
+        }
+
         // Execute the controller method
         $method->invokeArgs($controller, $this->params);
         
@@ -586,7 +590,18 @@ class AfaException {
                 $view->message = $errstr;
                 $view->file = $errfile;
                 $view->line = $errline;
-                $view->trace = preg_replace("/\n/", "</p><p>", '<p>'.$errcontext."</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+
+                if(is_string($errcontext)) {
+                    $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . $errcontext . "</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+                }elseif(is_array($errcontext)){
+                    $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . var_export($errcontext, true) . "</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+//                    $view->trace =  var_export($errcontext, true);
+//                    foreach($errcontext as $key=>$value){
+//                        $view->trace .= '<p>'.$key.'=>'.$value;
+//                    }
+                    //$view->trace .= "<p>PHP \" . PHP_VERSION . \" (\" . PHP_OS . \")</p>";
+                }
+                //$view->trace .= "<p>PHP \" . PHP_VERSION . \" (\" . PHP_OS . \")</p>";
                 
                 $view->render();
                 exit(1);
