@@ -69,5 +69,15 @@ class Man_Controller extends Controller
         $view->render();
     }
 
+    /**
+     * 手册主页
+     */
+    public function index_Action()
+    {
+        $view = &$this->view;
+        $view->set_view($this->vdir . 'index');
+        $view->render();
+    }
+
 
 }
