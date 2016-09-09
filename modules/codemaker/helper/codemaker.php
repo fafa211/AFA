@@ -48,10 +48,6 @@ class codemaker {
         $this->datetime = date("Y-m-d H:i:s");
         
         $this->vdir = $module === $model?"":$model.'/';
-        
-        $this->ctrl();
-        $this->model();
-        $this->view();
     }
     
     /**
@@ -93,11 +89,12 @@ class codemaker {
         $this->modelstr .= "'{$this->prikey}'=>0,\n";
         
         foreach ($this->fields as $f){
+            if($f['name'] == $this->prikey) continue;
             $this->modelstr .= "'{$f['name']}'=>'{$f['default_value']}',\n";
         }
         
         $this->modelstr .= ");\n}\n";
-        return $this->ctrlstr;
+        return $this->modelstr;
     }
     
     /**
@@ -278,6 +275,11 @@ class codemaker {
      * 保存生成的结果
      */
     public function store(){
+        //执行ctrl,model,view的生成
+        $this->ctrl();
+        $this->model();
+        $this->view();
+
         //保存Controller文件
         $this->write(MODULEPATH.$this->module.'/controller/'.$this->name.'.php', $this->ctrlstr);
         
@@ -293,6 +295,17 @@ class codemaker {
         $this->write($viewdir.'show.php', $this->viewarr['show']);
         
         //报错Model文件
+        $this->write(MODULEPATH.$this->module.'/model/'.$this->name.'.php', $this->modelstr);
+    }
+
+    /**
+     * 单独生成model - 保存生成model的结果
+     */
+    public function store_model(){
+        //执行model的生成
+        $this->model();
+
+        //保存Model文件
         $this->write(MODULEPATH.$this->module.'/model/'.$this->name.'.php', $this->modelstr);
     }
     
