@@ -84,12 +84,12 @@ class common{
 
 	/**
 	 * 创建目录
+	 * @param $dir 目录路径
+	 * @return boolean true/false;
 	 */
 	public static function createDir($dir)
 	{
-		$oldmask=umask(0);
-		mkdir($dir, 0755);
-		umask($oldmask);
+		return is_dir($dir) or (self::createDir(dirname($dir)) and @mkdir($dir, 0777));
 	}
 
 	/**
