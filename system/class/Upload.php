@@ -38,6 +38,10 @@ class Upload {
         'image/gif'
     );
 
+    public static $file_types = array(
+        'txt','doc','pdf','rar','zip','png','jpg','gif','xls','xlsx','docx','pptx','cvs','tar','gz'
+    );
+
 	/**
 	 * Save an uploaded file to a new location. If no filename is provided,
 	 * the original filename will be used, with a unique prefix added.
@@ -122,6 +126,77 @@ class Upload {
 
 		return FALSE;
 	}
+
+	/**
+	 * Save an uploaded file to a new location. If no filename is provided,
+	 * the original filename will be used, with a unique prefix added.
+	 *
+	 * This method should be used after validating the $_FILES array:
+	 *
+	 *     if ($array->check())
+	 *     {
+	 *         // Upload is valid, save it
+	 *         Upload::save($array['file']);
+	 *     }
+	 *
+	 * @param   array    uploaded file data
+	 * @return  FALSE    on failure
+	 */
+	public static function saveHash(array $file)
+	{
+		if ( ! isset($file['tmp_name']) OR ! is_uploaded_file($file['tmp_name']))
+		{
+			// Ignore corrupted uploads
+			return FALSE;
+		}
+
+		//文件唯一标识ID
+		$hash_id = md5($file['tmp_name'].'-'.uniqid());
+
+		// Use the default filename, with a timestamp pre-pended
+		$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if(!in_array($ext, self::$file_types)) return false;
+
+        //文件名称
+		$filename = $hash_id . '.' . $ext;
+        //文件存储目录
+		$directory = self::getDirectory($hash_id);
+        //创建文件存储目录
+		$flag = common::createDir($directory);
+		if(!$flag) {
+			throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
+		}
+
+		// Make the filename into a complete path
+		$filename = $directory.DIRECTORY_SEPARATOR.$filename;
+
+		if (move_uploaded_file($file['tmp_name'], $filename))
+		{
+			// Return new file path
+			return array(
+				'hash_id'=>$hash_id,
+				'suffix'=>$ext,
+				'filename'=>$filename
+			);
+		}
+
+		return FALSE;
+	}
+
+    /**
+     * @param $hash_id 文件唯一hash_id
+     */
+    public static function getDirectory($hash_id){
+        $config = F::config('upload');
+        if ($config) {
+            $directory = $config['direct'];
+        } else {
+            $directory = DOCROOT . DIRECTORY_SEPARATOR . Upload::$default_directory;
+        }
+
+        $directory .= DIRECTORY_SEPARATOR . substr($hash_id, 0, 2).DIRECTORY_SEPARATOR.substr($hash_id, 2, 2);
+        return $directory;
+    }
 
 	/**
 	 * Tests if upload data is valid, even if no file was uploaded. If you
