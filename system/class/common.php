@@ -108,9 +108,10 @@ class common{
 	 *
 	 * @param  mixed   string site URI or URL to redirect to, or array of strings if method is 300
 	 * @param  string  HTTP method of redirect
+	 * @param  object swoole_http_response
 	 * @return void
 	 */
-	public static function redirect($uri = '', $method = '302')
+	public static function redirect($uri = '', $method = '302', $response = '')
 	{
 		$codes = array
 		(
@@ -128,13 +129,24 @@ class common{
 		if (strpos($uri, '://') === FALSE){
 			$uri = input::uri('base').$uri;
 		}
-		if ($method === 'refresh'){
-			header('Refresh: 0; url='.$uri);
-		} else{
-			header('HTTP/1.1 '.$method.' '.$codes[$method]);
-			header('Location: '.$uri);
+		if(USE_SWOOLE && $response instanceof swoole_http_response) {
+			if ($method === 'refresh') {
+				$response->header('Refresh', '0; url=' . $uri);
+			} else {
+				$response->status(302);
+				$response->header('Location', $uri);
+			}
+			//$response->end('<h1>' . $method . ' - ' . $codes[$method] . '</h1>');
+		}else {
+			if ($method === 'refresh') {
+				header('Refresh: 0; url=' . $uri);
+			} else {
+				header('HTTP/1.1 ' . $method . ' ' . $codes[$method]);
+				header('Location: ' . $uri);
+			}
+			//echo '<h1>' . $method . ' - ' . $codes[$method] . '</h1>';
 		}
-		exit('<h1>'.$method.' - '.$codes[$method].'</h1>');
+		return true;
 	}
 
 	/**

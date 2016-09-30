@@ -12,7 +12,7 @@ define('VERSION', '1.0');
 define('DEBUG', 2);
 
 //是否使用SWOOLE做服务器
-define('USE_SWOOLE', false);
+define('USE_SWOOLE', true);
 
 //打开代码提示
 ini_set('display_errors', 'on');
@@ -57,7 +57,7 @@ global $modules;
  * 打开的模块设置
  */
 $modules = array(
-    'codemaker' => MODULEPATH.'codemaker'.DIRECTORY_SEPARATOR,//生成模块代码，正式生产环境下请删除此行
+    //'codemaker' => MODULEPATH.'codemaker'.DIRECTORY_SEPARATOR,//生成模块代码，正式生产环境下请删除此行
     //'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
     //'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
     'idcarea' => MODULEPATH.'idcarea'.DIRECTORY_SEPARATOR,
@@ -82,9 +82,9 @@ global $config;
 require 'config.php';
 
 //执行请求
-$request = Request::instance()->run();
+//$request = Request::instance()->run();
 
 //输出性能调试信息
-F::debug($request);
+//F::debug($request);
 
 ?>
