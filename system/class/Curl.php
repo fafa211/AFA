@@ -49,12 +49,12 @@ class Curl {
         $config_arr = F::config('curl');
         
         $this->instance = curl_init();
-        
+
         if (is_array($config))
         {
-            $config_arr = array_merge($config_arr, $config);
+            $config_arr =  $config + $config_arr;
         }
-                
+
         curl_setopt_array($this->instance, $config_arr);
         
     }
@@ -96,9 +96,7 @@ class Curl {
         //Wrap the error reporting in an exception
         if ($result === FALSE)
         { 
-            throw new Exception("Curl error: :name", 
-                array(':name' => ucfirst(curl_error($this->instance)))
-                );
+            throw new Exception("Curl error: ".ucfirst(curl_error($this->instance)));
         }
         else
         {

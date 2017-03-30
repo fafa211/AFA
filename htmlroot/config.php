@@ -28,6 +28,9 @@ $config['upload'] = array(
     'size' => 2097152
 );
 
+//加解密秘钥
+$config['authkey'] = 'sj323TY#@w1&$qw21';
+
 //缓存设置
 $config['cache'] = array(
     'driver' => 'file',
@@ -46,58 +49,27 @@ $config['database'] = array(
     'default' => array(//默认数据库
         // 数据库设置
         'master' => array( // 数据库链接设置 Master
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
+            'host' => 'localhost', // 数据库主机名或IP
+            'user' => 'myservice', // 用户名
+            'password' => 'myserver321', // 密码
+            'dbname' => 'myservices', // 数据库名称
             'charset' => 'utf8', // 字符集
             'conmode' => false
         ),
     ),
-    'blog' => array(//blog数据库
+    'logServer' => array(//默认数据库
         // 数据库设置
         'master' => array( // 数据库链接设置 Master
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
+            'host' => 'localhost', // 数据库主机名或IP
+            'user' => 'myservice', // 用户名
+            'password' => 'myserver321', // 密码
+            'dbname' => 'myserver_common_logs', // 数据库名称
             'charset' => 'utf8', // 字符集
             'conmode' => false
-        ),
-        'slave' => array( // 数据库链接设置 Slave
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
-            'charset' => 'utf8', // 字符集
-            'conmode' => false // true为长久连接模式，false为短暂连接模式
         ),
     ),
-    'user' => array(//blog数据库
-        // 数据库设置
-        'master' => array( // 数据库链接设置 Master
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
-            'charset' => 'utf8', // 字符集
-            'conmode' => false
-        ),
-        'slave1' => array( // 数据库链接设置 Slave
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
-            'charset' => 'utf8', // 字符集
-            'conmode' => false // true为长久连接模式，false为短暂连接模式
-        ),
-        'slave2' => array( // 数据库链接设置 Slave
-            'host' => '127.0.0.1', // 数据库主机名或IP
-            'user' => 'root', // 用户名
-            'password' => 'tl123456', // 密码
-            'dbname' => 'afadbs', // 数据库名称
-            'charset' => 'utf8', // 字符集
-            'conmode' => false // true为长久连接模式，false为短暂连接模式
-        ),
-    )
+
+
+
+
 );// true为长久连接模式，false为短暂连接模式

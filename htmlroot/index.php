@@ -6,10 +6,16 @@
 define('AFA', true);
 
 //版本号
-define('VERSION', '0.1');
+define('VERSION', '1.0');
 
-//调试状态, 为上线产品时请设置为 false
-define('DEBUG', true);
+//调试状态, 0 不输出调试信息, 1输出到页面, 2输出到文件
+define('DEBUG', 2);
+
+//是否使用SWOOLE做服务器
+define('USE_SWOOLE', false);
+
+//打开代码提示
+ini_set('display_errors', 'on');
 
 //文件扩展名
 define('EXT', '.php');
@@ -36,49 +42,49 @@ define('MODULEPATH', PROROOT.DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR);
 //diver 驱动所在目录
 define('DRIVERPATH',CLASSPATH.'driver'.DIRECTORY_SEPARATOR);
 
-require(CLASSPATH.'Core'.EXT);
-require(CLASSPATH.'db.php');
-require(CLASSPATH.'F.php');
+//默认控制器
+define('DEFAULT_CONTROLLER', 'hello');
+//默认Action
+define('DEFAULT_ACTION', 'index');
+//框架路由模式, 1为默认模式, 2为GET参数控制模式
+define('ROUTE_MODE', 1);
+
 
 //声明为全局变量
-global $cModule, $useModule, $modules;
-
-//使用模型, 当访问$modules里的文件时，将自动设置为 true
-$useModule = false;
-//默认模型名
-$cModule = false;
-//默认控制器
-$cController = 'hello';
-//默认方法名
-$cMethod	 = 'index';
-//其他参数
-$cParams    = array();
+global $modules;
 
 /**
  * 打开的模块设置
  */
 $modules = array(
-    'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
-    'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
     'codemaker' => MODULEPATH.'codemaker'.DIRECTORY_SEPARATOR,//生成模块代码，正式生产环境下请删除此行
+    //'blog' => MODULEPATH.'blog'.DIRECTORY_SEPARATOR,
+    //'user' => MODULEPATH.'user'.DIRECTORY_SEPARATOR,
+    'idcarea' => MODULEPATH.'idcarea'.DIRECTORY_SEPARATOR,
+    'iparea' => MODULEPATH.'iparea'.DIRECTORY_SEPARATOR,
+    'man' => MODULEPATH.'man'.DIRECTORY_SEPARATOR,
+    'phonearea' => MODULEPATH.'phonearea'.DIRECTORY_SEPARATOR,
+    'fileServer' => MODULEPATH.'fileServer'.DIRECTORY_SEPARATOR,
+    'account' => MODULEPATH.'account'.DIRECTORY_SEPARATOR,//服务授权模块
+    'logServer' => MODULEPATH.'logServer'.DIRECTORY_SEPARATOR,
+
 
 );
 
+require(CLASSPATH.'core'.EXT);
+require(CLASSPATH.'db.php');
+require(CLASSPATH.'F.php');
+
+//声明为全局变量
+global $config;
+
 //载入配置文件
 require 'config.php';
-//关闭默认错误提示
-ini_set('display_errors', 'off');
 
 //执行请求
-Request::instance()->run();
+$request = Request::instance()->run();
 
-if (DEBUG){
-    $benmark = F::benchmark('end');
-    echo '<hr />';
-    echo 'Start: time: '.AFA_START_TIME.' Start Memory: '.F::convert(AFA_START_MEMORY).'<br />';
-    foreach ($benmark as $k=>$v){
-        echo $k.": Time ".$v['time'].' s Memory: '.$v['memory'].'<br />';
-    }
-    echo '<br />';
-}
+//输出性能调试信息
+F::debug($request);
+
 ?>

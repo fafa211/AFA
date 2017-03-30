@@ -289,6 +289,8 @@ class F{
     
     /**
      * 记录运行时的时间点
+     * @param string $mark 记录标示
+     * @return array $bencharr  返回所有运行时间点信息
      */
     public static function benchmark($mark = ''){
         static $bencharr;
@@ -302,10 +304,96 @@ class F{
             array_push($bencharr, array('time'=>round(microtime(true)-AFA_START_TIME, 6), 'memory'=>F::convert(memory_get_usage())));
         }
         return $bencharr;
-    } 
-    
+    }
+
+    /**
+     * @param $size 大小字节数量
+     * @return string
+     */
     public static function convert($size){
         $unit=array('b','kb','mb','gb','tb','pb');
         return @round($size/pow(1024,($i=floor(log($size,1024)))),2).' '.$unit[$i];
+    }
+
+    /**
+     * 输出性能调试信息
+     * @param Request $request
+     */
+    public static function debug(Request $request){
+
+        if(DEBUG === 0){
+            return ;
+        }
+
+        global $cController, $cMethod;
+
+        //记录最后运行信息
+        $benmark = F::benchmark('end');
+        //url信息
+        $becnmark_str_arr = array('url: '.$request->url);
+        $becnmark_str_arr['start'] = 'Start: time: ' . AFA_START_TIME . ' Start Memory: ' . F::convert(AFA_START_MEMORY);
+        foreach ($benmark as $k => $v) {
+            $becnmark_str_arr[$k] = $k . ": Time " . $v['time'] . ' s Memory: ' . $v['memory'];
+        }
+
+
+        if(DEBUG === 1) {//浏览器中直接输出
+            echo '<hr />';
+            echo join('<br />', $becnmark_str_arr);
+            echo '<br />';
+            return ;
+        }
+        if(DEBUG === 2){//输出到性能调试日志中
+            $logPath = PROROOT.'/runtime/benchmarklog/';
+            $fileName = 'log'.date('Y-m-d');
+            $logs = new Logs($logPath, $fileName);
+
+            $logContent = join("\n", $becnmark_str_arr);
+
+            $logs->LogInfo($logContent);
+        }
+
+    }
+
+    /**
+     * 因自带的json_encode会默认把中文字符转化为\uXXX的形式
+     * 此方法是为了不对中文字符做转移的json_encode
+     * @param $input string/array
+     * @return string json encoded string
+     */
+    public static function json_encode($input){
+
+        // // 从 PHP 5.4.0 起, 增加了这个选项
+        if(defined(JSON_UNESCAPED_UNICODE)){
+            return json_encode($input, JSON_UNESCAPED_UNICODE);
+        }
+        //PHP5.4以下版本
+        if(is_string($input)){
+            $text = $input;
+            $text = str_replace('\\', '\\\\', $text);
+            $text = str_replace(
+                array("\r", "\n", "\t", "\""),
+                array('\r', '\n', '\t', '\\"'),
+                $text);
+            return '"' . $text . '"';
+        }else if(is_array($input) || is_object($input)){
+            $arr = array();
+            $is_obj = is_object($input) || (array_keys($input) !== range(0, count($input) - 1));
+            foreach($input as $k=>$v){
+                if($is_obj){
+                    $arr[] = self::json_encode($k) . ':' . self::json_encode($v);
+                }else{
+                    $arr[] = self::json_encode($v);
+                }
+            }
+            if($is_obj){
+                return '{' . join(',', $arr) . '}';
+            }else{
+                return '[' . join(',', $arr) . ']';
+            }
+        }else{
+            return $input . '';
+        }
+
     }
 }

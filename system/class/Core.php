@@ -15,13 +15,22 @@ class Request{
     public $url = '';
     //URL目录,方便同一控制器中使用
     public $url_pre = '';
+    //swoole中 request 对象
+    public $request;
+    //swoole中 response 对象
+    public $response;
     
     public static function instance($url = ''){
         return new self($url);
     }
-    
-    public function __construct($url = ''){
-        
+
+    /**
+     *
+     * 构造函数, 解析 url
+     * @param $url url相对地址
+     * @return $this
+     */
+    private function __construct($url = ""){
         $url = trim($url);
         if ($url == ''){
             if(PHP_SAPI == 'cli') {
@@ -32,93 +41,105 @@ class Request{
         }else{
             $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
         }
-        
+
         if(F::config('suffix')) {
             $url = str_replace(F::config('suffix'), '', $url);
         }
-        $this->url = $url;
-        
-        global $modules, $cModule, $cController, $cMethod;
-        $this->controller = $cController;
-        $this->method = $cMethod;
-        
-        $path_vars = explode('/', $url);
-        
-        if(isset($path_vars[1]) && $path_vars[1])  {
-            $this->module = $path_vars[1];//模型名
-        }else{
-            $this->module = $cModule? $cModule: NULL;
-        }
-        
-        if(isset($path_vars[2]) && $path_vars[2])  {
-            $this->controller = $path_vars[2];
+
+        if('/' == substr($url, -1, 1)){
+            $this->url = substr($url, 0, -1);
+        }else {
+            $this->url = $url;
         }
 
-        if ($this->module && isset($modules[$this->module])) {
-            $this->module_dir = MODULEPATH.$this->module.DIRECTORY_SEPARATOR;
-            //控制器所在目录
-            $conpath = $this->module_dir.'controller'.DIRECTORY_SEPARATOR;
-            //查找module/模块名/controller/控制器名.php 文件
-            $cFile = $conpath.$this->controller.EXT;
-            
-            if (file_exists($cFile)) {
-                $this->url_pre = $this->module.'/'.$this->controller.'/';
-                $this->method = @$path_vars[3]?@$path_vars[3]:$this->method;
-                $this->params = @$path_vars[4]?array_slice($path_vars, 4):$this->params;
-            } else {
-                $confile = @$path_vars[3]?@$path_vars[3]:$cController;
-                //查找module/模块名/controller/子文件夹/控制器名.php 文件
-                $cFile = $conpath.$this->controller.DIRECTORY_SEPARATOR.$confile.EXT;
-                if(file_exists($cFile)){
-                    $this->url_pre = $this->module.'/'.$this->controller.'/'.$confile.'/';
-                    $this->controller = $confile.'_'.ucfirst($this->controller);
-                    $this->method = @$path_vars[4]?@$path_vars[4]:$this->method;
-                    $this->params = @$path_vars[5]?array_slice($path_vars, 5):$this->params;
-                }else {
-                    //查找module/模块名/controller/模块名.php 文件
-                    $cFile = $conpath.$this->module.EXT;
-                    if (file_exists($cFile)){
-                        $this->url_pre = $this->module.'/';
-                        $this->controller = $this->module;
-                        $this->method = @$path_vars[2]?@$path_vars[2]:$this->method;
-                        $this->params = @$path_vars[3]?array_slice($path_vars, 3):$this->params;
-                    }else 
-                        trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+        $path_vars = explode('/', $this->url);
+
+        global $modules;
+
+        $this->controller = DEFAULT_CONTROLLER;
+        $this->method = DEFAULT_ACTION;
+
+        if(2 == ROUTE_MODE){
+            //支持通过get参数控制
+            input::get('m') && $this->module = input::get('m');
+            (input::get('c') && $this->controller = input::get('c')) || (input::get('m') && $this->controller = input::get('m'));
+            input::get('a') && $this->method = input::get('a');
+
+            //get传参数时, params多个值用 | 符号隔开
+            input::get('params') && $this->params = explode('|', input::get('params'));
+        }else {
+
+            $path_dir_num = count($path_vars);
+
+            if (2 == $path_dir_num) {
+                if (isset($modules[$path_vars[1]])) {
+                    $this->module = $path_vars[1]; //模块名称
+                } else {
+                    $this->controller = $path_vars[1];
+                }
+            } else if (3 == $path_dir_num) {
+                if (isset($modules[$path_vars[1]])) {
+                    $this->module = $path_vars[1]; //模块名称
+                    $this->controller = $path_vars[2];
+                } else {
+                    $this->controller = $path_vars[1];
+                    $this->method = $path_vars[2];
+                }
+            } else if (4 <= $path_dir_num) {
+                if (isset($modules[$path_vars[1]])) {
+                    $this->module = $path_vars[1]; //模块名称
+                    $this->controller = $path_vars[2];
+                    $this->method = $path_vars[3];
+                    $this->params = isset($path_vars[4]) ? array_slice($path_vars, 4) : $this->params;
+                } else {
+                    $this->controller = $path_vars[1];
+                    $this->method = $path_vars[2];
+                    $this->params = array_slice($path_vars, 3);
                 }
             }
+        }
+
+        if ($this->module) {
+            //模型所在目录
+            $this->module_dir = $modules[$this->module];
+
+            //查找module/模块名/controller/控制器名.php 文件
+            $cFile = $this->module_dir.'controller'.DIRECTORY_SEPARATOR.$this->controller.EXT;
+
+            $this->url_pre = '/'.$this->module.'/'.$this->controller.'/';
+
+            if (!file_exists($cFile)) {
+                $this->method != DEFAULT_ACTION && array_unshift($this->params, $this->method);
+                $this->controller != DEFAULT_CONTROLLER && $this->method = $this->controller;
+                $this->controller = $this->module;
+
+                $cFile = $this->module_dir.'controller'.DIRECTORY_SEPARATOR.$this->controller.EXT;
+                $this->url_pre = '/'.$this->module.'/'.$this->controller.'/';
+
+                if(!file_exists($cFile)) {
+                    return trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+                }
+            }
+
             //把路径加入自动载入中
             Load::addModule($this->module, $this->module_dir);
-            
+
         } else {
-            $this->controller = $this->module?$this->module:$cController;
+
             $conpath = APPPATH.'controller'.DIRECTORY_SEPARATOR;
             //查找application/controller/控制器名.php 文件
             $cFile = $conpath.$this->controller.EXT;
-            
-            if (file_exists($cFile)) {
-                $this->url_pre = $this->controller.'/';
-                $this->method = @$path_vars[2]?@$path_vars[2]:$this->method;
-                $this->params = @$path_vars[3]?array_slice($path_vars, 3):$this->params;
-            } else {
-                $confile = @$path_vars[2]?@$path_vars[2]:$cController;
-                //查找application/controller/子文件夹/控制器名.php 文件
-                $cFile = $conpath.$this->controller.DIRECTORY_SEPARATOR.$confile.EXT;
-                if(file_exists($cFile)){
-                    $this->url_pre = $this->controller.'/'.$confile.'/';
-                    $this->controller = $confile.'_'.ucfirst($this->controller);
-                    $this->method = @$path_vars[3]?@$path_vars[3]:$this->method;
-                    $this->params = @$path_vars[4]?array_slice($path_vars, 4):$this->params;
-                }else {
-                    trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
-                }
+
+            $this->url_pre = '/'.$this->controller.'/';
+
+            if (!file_exists($cFile)) {
+                return trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
             }
         }
-        
-        $this->url_pre = '/'.$this->url_pre;
-        
+
         //载入控制器文件
-        require_once $cFile;
-        
+        include_once $cFile;
+
         return $this;
     }
     
@@ -127,11 +148,17 @@ class Request{
      * @throws AfaException
      */
     public function run(){
-        // controller 类的命名规则为：文件名(首字母大写)+'_Controller'
-        $class = new ReflectionClass(ucfirst($this->controller) . '_Controller');
-        
-        // Create a new controller instance
-        $controller = $class->newInstance($this);
+        try {
+            // controller 类的命名规则为：文件名(首字母大写)+'_Controller'
+            $class = new ReflectionClass(ucfirst($this->controller) . '_Controller');
+
+            // Create a new controller instance
+            $controller = $class->newInstance($this);
+        }catch (ReflectionException $e){
+            AfaException::exception_handle($e);
+            return $this;
+        }
+
         try {
             // Load the controller method
             $method = $class->getMethod($this->method.'_Action');
@@ -144,13 +171,24 @@ class Request{
         }
         
         $before = $class->getMethod('before');
-        $before->invokeArgs($controller, $this->params);
-        
-        // Execute the controller method
-        $method->invokeArgs($controller, $this->params);
+        $result = $before->invokeArgs($controller, $this->params);
+        if($result === false){
+            //before可作为拦截器,当返回值为false, 目标 action, after 方法都不会执行
+            return $this;
+        }
+
+        try {
+            // Execute the controller method
+            $method->invokeArgs($controller, $this->params);
+        }catch (ReflectionException $e){
+            AfaException::exception_handle($e);
+            return $this;
+        }
         
         $after = $class->getMethod('after');
         $after->invokeArgs($controller, $this->params);
+
+        return $this;
     }
     
     /**
@@ -180,6 +218,10 @@ class Request{
         return $this->$key;
     }
 
+    public function __set($key, $value){
+        return $this->$key = $value;
+    }
+
 }
 
 /**
@@ -197,7 +239,7 @@ class Controller {
 	 *
 	 */
 	public function __construct(Request $request){
-		$this->view = View::instance($request->module_dir);
+		$this->view = View::instance($request->module_dir, '', $request->response);
 		$this->request = $request;
 	}
 	
@@ -213,8 +255,26 @@ class Controller {
 	     
 	}
 	
-	public function echojson(){
-	    
+	public function echojson($data, $format = 'json'){
+
+        if('json' == $format){
+            $return_str = F::json_encode($data);
+        }elseif('jsonp' == $format){
+            $fun = input::get('callback');
+            $return_str = $fun.'('.F::json_encode($data).')';
+        }else{
+            $return_str = $data;
+        }
+
+        if(USE_SWOOLE) {
+            //swoole做服务时必须使用其response返回结果
+            $this->request->response->end($return_str);
+        }else{
+            header("Content-type:text/html;charset=utf-8");
+            echo $return_str;
+        }
+
+        return true;
 	}
 	
 	public function echomsg($message, $url = false, $exit = false){
@@ -226,17 +286,50 @@ class Controller {
 	}
 	
 	public function echo404($message){
-	    header("HTTP/1.1 404 Not Found");
-	    header("Status: 404 Not Found");
-	    header("Content-Type: text/html; charset=UTF-8");
-	    if (preg_match('/MSIE/i',input::server('HTTP_USER_AGENT'))){
-	        echo str_repeat(" ",512);
-	    }
-	    echo 'this 404 page <br />';
-	    echo $message;
-	    exit;
+        if(USE_SWOOLE) {
+            $this->request->response->header("Status", "404 Not Found");
+            $this->request->response->header("Content-Type", "text/html; charset=UTF-8");
+
+            $this->request->response->end("this 404 page <br />" . $message);
+            return false;
+        }else {
+            header("HTTP/1.1 404 Not Found");
+            header("Status: 404 Not Found");
+            header("Content-Type: text/html; charset=UTF-8");
+            if (preg_match('/MSIE/i', input::server('HTTP_USER_AGENT'))) {
+                echo str_repeat(" ", 512);
+            }
+            echo 'this 404 page <br />';
+            echo $message;
+            exit;
+        }
 	}
-	
+
+    /**
+     * 查看接口手册
+     * @param $api 接口名称
+     * @return bool true
+     */
+    public function man_Action($api = ''){
+        global $modules;
+        if(!isset($modules['man'])){
+            return $this->echo404('man 手册模块未开启.');
+        }
+
+        $path_url = '/man/api/'.$this->request->controller.($api?'/'.$api:'');
+        Request::instance($path_url)->run();
+    }
+
+    public function __set($name, $value)
+    {
+        $this->$name = $value;
+    }
+
+    public function __get($name)
+    {
+        return @$this->$name;
+    }
+
 }
 
 /**
@@ -245,7 +338,7 @@ class Controller {
  */
 class Model {
 	//数据库链接对象
-	public $db;
+    protected $db;
 	//数据表名称
 	protected $table;
 	//模块名称
@@ -286,7 +379,7 @@ class Model {
 	        $insert = true;
 	        $sql = sql::insert($fieldsArr, $this->table);
 	    }
-	    
+
 	    $flag = $this->db->exec($sql);
 	    if ($flag && $insert){
 	        //插入数据后更新当前数据的ID
@@ -294,6 +387,22 @@ class Model {
 	    }
 	    return $flag;
 	}
+
+    /**
+     * 插入  ORM, 主键值非自增时使用此方法插入数据
+     * @return Ambigous <boolean, number>
+     */
+    public function insert(){
+        $fieldsArr = array();
+        foreach ($this->fileds as $f=>$v){
+            $fieldsArr[$f] = isset($this->$f)?$this->$f:$v;
+        }
+
+        $sql = sql::insert($fieldsArr, $this->table);
+        $flag = $this->db->exec($sql);
+
+        return $flag;
+    }
 	
 	/**
 	 * 删除 ORM
@@ -327,6 +436,7 @@ class Model {
 	public function __set($name, $value){
 	    $this->$name = $value;
 	}
+
 }
 
 /**
@@ -341,6 +451,11 @@ class View {
 	private $filename = '';
 	
 	private $module_dir = '';
+
+    /**
+     * @var swoole->response $response
+     */
+    private $response;
 	
 	/**
 	 * 视图变量存放
@@ -356,16 +471,19 @@ class View {
 	 * 构造函数
 	 *
 	 * @param $file 视图文件名
+     * @param $response swoole_http_response
 	 */
-	public function __construct($file = ''){
+	public function __construct($file = '', $response = null){
 		$this->filename = $file;
+        $response && $this->response = $response;
 	}
 	
 	/**
 	 * @param 静态方法
+     * @param $response swoole_http_response
 	 */
-	public static function instance($module_dir = '', $file = ''){
-		$view = new View($file);
+	public static function instance($module_dir = '', $file = '', $response = null){
+		$view = new View($file, $response);
 		$view->module_dir = $module_dir;
 		return $view;
 	}
@@ -444,7 +562,13 @@ class View {
 
 		// Fetch the output and close the buffer
 		$str = ob_get_clean();
-		if ($render) echo $str;
+        if ($render) {
+            if(USE_SWOOLE && $this->response instanceof swoole_http_response){
+                $this->response->end($str);
+            }else{
+                echo $str;
+            }
+        }
 		return $str;
 	}
 	
@@ -479,15 +603,19 @@ class AfaException {
         switch ($code){
             case E_ERROR:
             case 1045:
-                $view = new View(APPPATH.'view'.DIRECTORY_SEPARATOR.'error');
-                $view->type = '错误';
-                $view->message = $exception->getMessage();
-                $view->file = $exception->getFile();
-                $view->line = $exception->getLine();
-                $view->trace = preg_replace("/\n/", "</p><p>", '<p>'.$exception->getTraceAsString());
-                
-                $view->render();
-                exit(1);
+                if(USE_SWOOLE){
+                    echo "<b>ERROR</b> [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
+                }else {
+                    $view = new View(APPPATH . 'view' . DIRECTORY_SEPARATOR . 'error');
+                    $view->type = '错误';
+                    $view->message = $exception->getMessage();
+                    $view->file = $exception->getFile();
+                    $view->line = $exception->getLine();
+                    $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . $exception->getTraceAsString());
+
+                    $view->render();
+                }
+
                 break;
             case E_WARNING:
                 echo "<b>WARNING</b> [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
@@ -525,15 +653,23 @@ class AfaException {
             case E_USER_ERROR:
             case E_PARSE:
             case E_ERROR:
-                $view = new View(APPPATH.'view'.DIRECTORY_SEPARATOR.'error');
-                $view->type = '错误';
-                $view->message = $errstr;
-                $view->file = $errfile;
-                $view->line = $errline;
-                $view->trace = preg_replace("/\n/", "</p><p>", '<p>'.$errcontext."</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
-                
-                $view->render();
-                exit(1);
+                if(USE_SWOOLE){
+                    echo "<b>My ERROR</b> [$errno] $errstr $errfile $errline<br />\n";
+                }else {
+                    $view = new View(APPPATH . 'view' . DIRECTORY_SEPARATOR . 'error');
+                    $view->type = '错误';
+                    $view->message = $errstr;
+                    $view->file = $errfile;
+                    $view->line = $errline;
+
+                    if (is_string($errcontext)) {
+                        $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . $errcontext . "</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+                    } elseif (is_array($errcontext)) {
+                        $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . var_export($errcontext, true) . "</p><p>PHP " . PHP_VERSION . " (" . PHP_OS . ")</p>");
+                    }
+
+                    $view->render();
+                }
                 break;
             
             case E_USER_WARNING:
@@ -592,10 +728,10 @@ class Load {
 		}else{
 			$lastpos = strrpos($class_name, '_');
 			$suffix = substr($class_name, $lastpos+1);
-			$file = '';
+
 			$class_name = substr($class_name, 0, $lastpos);
 			
-			if ($suffix == 'Model' || $suffix = 'Controller'){
+			if ($suffix == 'Model' || $suffix == 'Controller' || $suffix == 'Service'){
 			    return self::loadModule($class_name, strtolower($suffix));
 			}
 		}
@@ -613,21 +749,43 @@ class Load {
 	 * @param string $type
 	 */
 	public static function loadModule($class_name, $type = 'model'){
+
+        //service自动载入
+        if($type == 'service'){
+            @list($the_module, $service) = explode('_', $class_name);
+            $module_dir = MODULEPATH. strtolower($the_module). DIRECTORY_SEPARATOR;
+            $file = $module_dir. $type . DIRECTORY_SEPARATOR . $service . EXT;
+
+            if (file_exists($file)) {
+                //自动载入模块路径
+                self::addModule(strtolower($the_module), $module_dir);
+
+                return include ($file);
+            }else{
+                //Application下的service载入
+                if(empty($service)){
+                    $service = strtolower($the_module);
+                    $file = APPPATH. $type . DIRECTORY_SEPARATOR . $service . EXT;
+                    return include ($file);
+                }
+            }
+            return false;
+        }
+        //model 或 controller 或 helper自动载入
 	    if(!empty(self::$modules)){
 	        foreach (self::$modules as $module => $dir) {
 	            $file = $dir . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
 	            if (file_exists($file)) return include ($file);
 	        }
 	    }
-	    $file = APPPATH . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
+        $file = APPPATH . $type . DIRECTORY_SEPARATOR . lcfirst($class_name) . EXT;
         if (file_exists($file)) return include ($file);
-        else {
-            if($type == 'controller' && strpos($class_name, '_') !== false){
-                list($classfile, $subdir) = explode('_', $class_name);
-                return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. $classfile. EXT;   
-            }
-            return include (CLASSPATH . $class_name . EXT);
+
+        if($type == 'controller' && strpos($class_name, '_') !== false){
+            list($classfile, $subdir) = explode('_', $class_name);
+            return include APPPATH . $type . DIRECTORY_SEPARATOR. $subdir. DIRECTORY_SEPARATOR. lcfirst($classfile). EXT;
         }
+        return include (CLASSPATH . $class_name . EXT);
 	}
 }
 
@@ -742,7 +900,7 @@ class input{
 		}
 	    switch ($key){
 			case 'base': {
-				return 'http://'.self::server('HTTP_HOST').'/';
+				return self::server('HTTP_HOST')?'http://'.self::server('HTTP_HOST').'/':F::config('domain');
 			}
 			case 'path': return self::server('PATH_INFO');
 			case 'request': return self::server('REQUEST_URI');

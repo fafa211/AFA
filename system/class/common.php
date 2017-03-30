@@ -51,78 +51,6 @@ class common{
 	}
 
 	/**
-	 * get city and Lan from ip address
-	 * @return String: city and Lan
-	 */
-	public static function convertip($ip) {
-
-		$return = '';
-
-		if(preg_match("/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/", $ip)) {
-
-			$iparray = explode('.', $ip);
-
-			if($iparray[0] == 10 || $iparray[0] == 127 || ($iparray[0] == 192 && $iparray[1] == 168) || ($iparray[0] == 172 && ($iparray[1] >= 16 && $iparray[1] <= 31))) {
-				$return = '- 本地';
-			} elseif($iparray[0] > 255 || $iparray[1] > 255 || $iparray[2] > 255 || $iparray[3] > 255) {
-				$return = '- 无效IP地址';
-			} else {
-				$tinyipfile = './ipdata/tinyipdata.dat';
-				if(@file_exists($tinyipfile)) {
-					$return = common::convertip_tiny($ip, $tinyipfile);
-				} else{
-					$return = '- IP地址文件不存在';
-				}
-			}
-		}
-
-		return $return;
-
-	}
-
-	/**
-	 * get city from ipdata file
-	 * @return String: city and Lan
-	 */
-	public static function convertip_tiny($ip, $ipdatafile) {
-
-		static $fp = NULL, $offset = array(), $index = NULL;
-
-		$ipdot = explode('.', $ip);
-		$ip    = pack('N', ip2long($ip));
-
-		$ipdot[0] = (int)$ipdot[0];
-		$ipdot[1] = (int)$ipdot[1];
-
-		if($fp === NULL && $fp = @fopen($ipdatafile, 'rb')) {
-			$offset = unpack('Nlen', fread($fp, 4));
-			$index  = fread($fp, $offset['len'] - 4);
-		} elseif($fp == FALSE) {
-			return  '- 无效IP地址文件';
-		}
-
-		$length = $offset['len'] - 1028;
-		$start  = unpack('Vlen', $index[$ipdot[0] * 4] . $index[$ipdot[0] * 4 + 1] . $index[$ipdot[0] * 4 + 2] . $index[$ipdot[0] * 4 + 3]);
-
-		for ($start = $start['len'] * 8 + 1024; $start < $length; $start += 8) {
-
-			if ($index{$start} . $index{$start + 1} . $index{$start + 2} . $index{$start + 3} >= $ip) {
-				$index_offset = unpack('Vlen', $index{$start + 4} . $index{$start + 5} . $index{$start + 6} . "\x0");
-				$index_length = unpack('Clen', $index{$start + 7});
-				break;
-			}
-		}
-
-		fseek($fp, $offset['len'] + $index_offset['len'] - 1024);
-		if($index_length['len']) {
-
-			return '- '.fread($fp, $index_length['len']);
-		} else {
-			return '- 未知IP';
-		}
-	}
-
-	/**
 	 * js信息提示
 	 * @param string $message:提示信息
 	 */
@@ -156,12 +84,12 @@ class common{
 
 	/**
 	 * 创建目录
+	 * @param $dir 目录路径
+	 * @return boolean true/false;
 	 */
 	public static function createDir($dir)
 	{
-		$oldmask=umask(0);
-		mkdir($dir, 0755);
-		umask($oldmask);
+		return is_dir($dir) or (self::createDir(dirname($dir)) and @mkdir($dir, 0777));
 	}
 
 	/**
@@ -180,9 +108,10 @@ class common{
 	 *
 	 * @param  mixed   string site URI or URL to redirect to, or array of strings if method is 300
 	 * @param  string  HTTP method of redirect
+	 * @param  object swoole_http_response
 	 * @return void
 	 */
-	public static function redirect($uri = '', $method = '302')
+	public static function redirect($uri = '', $method = '302', $response = '')
 	{
 		$codes = array
 		(
@@ -200,13 +129,24 @@ class common{
 		if (strpos($uri, '://') === FALSE){
 			$uri = input::uri('base').$uri;
 		}
-		if ($method === 'refresh'){
-			header('Refresh: 0; url='.$uri);
-		} else{
-			header('HTTP/1.1 '.$method.' '.$codes[$method]);
-			header('Location: '.$uri);
+		if(USE_SWOOLE && $response instanceof swoole_http_response) {
+			if ($method === 'refresh') {
+				$response->header('Refresh', '0; url=' . $uri);
+			} else {
+				$response->status(302);
+				$response->header('Location', $uri);
+			}
+			//$response->end('<h1>' . $method . ' - ' . $codes[$method] . '</h1>');
+		}else {
+			if ($method === 'refresh') {
+				header('Refresh: 0; url=' . $uri);
+			} else {
+				header('HTTP/1.1 ' . $method . ' ' . $codes[$method]);
+				header('Location: ' . $uri);
+			}
+			//echo '<h1>' . $method . ' - ' . $codes[$method] . '</h1>';
 		}
-		exit('<h1>'.$method.' - '.$codes[$method].'</h1>');
+		return true;
 	}
 
 	/**
@@ -214,11 +154,13 @@ class common{
 	 * @param string:$url: 请求接口地址
 	 * @param $params:string/array 参数
 	 * @param $post: bool:是否使用post提交
+	 * @param $headers: array:请求头信息
+	 * @return string 请求结果
 	 */
-	public static function curlExec($url, $params, $post = false){
+	public static function curlExec($url, $params, $post = false, $headers = array()){
 		$ch = curl_init( );
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
-		if (substr($url, 0, 7) == 'http://'){
+		if (substr($url, 0, 7) == 'http://' || substr($url, 0, 8) == 'https://'){
 			curl_setopt( $ch, CURLOPT_URL, $url );
 		}else {
 			curl_setopt( $ch, CURLOPT_URL, input::uri('base').$url );
@@ -233,7 +175,10 @@ class common{
 			}
 			curl_setopt( $ch, CURLOPT_POSTFIELDS, join('&', $tempArr) );
 		}
-		curl_setopt( $ch, CURLOPT_TIMEOUT, 600 );
+		if(!empty($headers)){
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		}
+		curl_setopt( $ch, CURLOPT_TIMEOUT, 10 );
 		ob_start( );
 		curl_exec( $ch );
 		$contents = ob_get_contents( );
