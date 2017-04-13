@@ -315,12 +315,21 @@ class sql {
         }else {
             $temp = array();
             foreach ($arr as $k => $v) {
-                $temp[] = "$k=" . self::escape($v) . "";
+                //$k为非数字时,为字段名称
+                if(is_numeric($k)){
+                    if(is_array($v) && count($v) == 3){
+                        $this->where($v[0], $v[1], $v[2]);
+                    }
+                }else {
+                    $temp[] = "$k=" . self::escape($v) . "";
+                }
             }
-            if ($this->where){
-                $this->where .= $connect.implode(' AND ', $temp);
-            }else{
-                $this->where = implode(' AND ', $temp);
+            if(!empty($temp)) {
+                if ($this->where) {
+                    $this->where .= $connect . implode(' AND ', $temp);
+                } else {
+                    $this->where = implode(' AND ', $temp);
+                }
             }
         }
         return $this;
