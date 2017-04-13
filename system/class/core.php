@@ -141,7 +141,10 @@ class Request{
             $this->url_pre = '/'.$this->controller.'/';
 
             if (!file_exists($cFile)) {
-                return trigger_error("Controller {$this->controller}:{$cFile} not exist! ", E_USER_ERROR);
+                $cFile = $conpath.$this->controller.DIRECTORY_SEPARATOR.$this->method.EXT;
+                $this->controller = $this->method;
+                $this->method = isset($this->params[0])?$this->params[0]:DEFAULT_ACTION;
+                $this->params = isset($path_vars[1])?array_slice($path_vars, 1):$this->params;
             }
         }
 
@@ -399,7 +402,7 @@ class Model {
 	        $insert = true;
 	        $sql = sql::insert($fieldsArr, $this->table);
 	    }
-//echo $sql;die;
+
 	    $flag = $this->db->exec($sql);
 	    if ($flag && $insert){
 	        //插入数据后更新当前数据的ID
@@ -448,6 +451,20 @@ class Model {
 	    ->limit($limit)->render();
 	    return $this->db->query($sql);
 	}
+
+    /**
+     * 基础查询-统计
+     * @param string $limit
+     * @param array $where
+     * @param string $orderby
+     * @return int: 查询结果数量
+     */
+    public function count($where = array()){
+        $sql = sql::select('count(1)', $this->table)
+            ->where($where)
+            ->render();
+        return $this->db->getOne($sql);
+    }
 	
 	public function __get($name){
 	    return isset($this->$name)?$this->$name:'';
@@ -530,10 +547,10 @@ class View {
 	private function set_file($file)
 	{
 		$c = substr($file, 0, 1);
-	    if ($c == DIRECTORY_SEPARATOR && file_exists($file . EXT))
-            $this->file = $file . EXT;
+	    if ($c == DIRECTORY_SEPARATOR && file_exists($file . VIEW_EXT))
+            $this->file = $file . VIEW_EXT;
         else {
-            $file = ($this->module_dir ? $this->module_dir : APPPATH) . 'view' . DIRECTORY_SEPARATOR . $file . EXT;
+            $file = ($this->module_dir ? $this->module_dir : APPPATH) . 'view' . DIRECTORY_SEPARATOR . $file . VIEW_EXT;
             if (file_exists($file)) {
                 return $this->file = $file;
             }else throw new Exception($file. 'is not exit', E_ERROR);
@@ -547,7 +564,7 @@ class View {
 	 * @return mixed   variable value if the key is found
 	 * @return void    if the key is not found
 	 */
-	public function &__get($key)
+	public function __get($key)
 	{
 		if (isset($this->params[$key]))
 			return $this->params[$key];
@@ -595,6 +612,15 @@ class View {
 	public function __toString(){
 	    return $this->render(false);
 	}
+
+    /**
+     * @param $file 视图文件地址
+     */
+    public static function output($file)
+    {
+        if (file_exists($file)) return $file;
+        return APPPATH . 'view/' . $file;
+    }
 }
 
 /**

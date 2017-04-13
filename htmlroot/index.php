@@ -20,6 +20,9 @@ ini_set('display_errors', 'on');
 //文件扩展名
 define('EXT', '.php');
 
+//视图模版文件扩展名
+define('VIEW_EXT', '.php');
+
 define('CHARSET', 'utf8');
 
 //开始时间
@@ -67,6 +70,7 @@ $modules = array(
     'fileServer' => MODULEPATH.'fileServer'.DIRECTORY_SEPARATOR,
     'account' => MODULEPATH.'account'.DIRECTORY_SEPARATOR,//服务授权模块
     'logServer' => MODULEPATH.'logServer'.DIRECTORY_SEPARATOR,
+    'vote' => MODULEPATH.'vote'.DIRECTORY_SEPARATOR,
 
 
 );
