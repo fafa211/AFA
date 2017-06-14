@@ -62,6 +62,16 @@ class Server_Controller extends Controller
     public static $log_path = '';//
 
     /**
+     * @var array 不需要登录监测的方法
+     */
+    protected $_nologin_action = array();
+
+    /**
+     * @var 为true,则表示无需授权验证的controller,
+     */
+    protected $_nologin_controller = false;
+
+    /**
      * 执行前的准备与日志记录
      * @return boolean
      */
@@ -101,6 +111,11 @@ class Server_Controller extends Controller
                         $verify = true;
                     }
                 }
+            }
+        }else{
+            //无需授权验证的controller   &  无需授权验证的action
+            if(true === $this->_nologin_controller || in_array($this->request->method, $this->_nologin_action)) {
+                $verify = true;
             }
         }
 

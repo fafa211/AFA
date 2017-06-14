@@ -8,40 +8,10 @@
 class Idcarea_Controller extends Server_Controller
 {
 
-    //private $vdir = '';
-
-    //private $the_level_arr = 'a:3:{i:1;s:18:"省份或直辖市";i:2;s:6:"市级";i:3;s:7:"区/县";}';
-
-
     /**
-     * 列表管理 idcarea
-     * @return html page
+     * @var bool 无需登录/key授权验证
      */
-//    public function lists_Action()
-//    {
-//        $idcarea = new idcarea_Model();
-//        $view = &$this->view;
-//        $view->set_view($this->vdir . 'lists');
-//        $view->lists = $idcarea->lists('0,10');
-//        $view->the_level_arr = unserialize($this->the_level_arr);
-//        $view->list_fields_arr = array('id', 'address', 'the_level', 'name');
-//        $view->render();
-//    }
-
-    /**
-     * 展示idcarea
-     * @param $id int 区域ID
-     * @return html page
-     */
-//    public function show_Action($id)
-//    {
-//        $idcarea = new idcarea_Model($id);
-//        $view = &$this->view;
-//        $view->set_view($this->vdir . 'show');
-//        $view->idcarea = $idcarea;
-//        $view->the_level_arr = unserialize($this->the_level_arr);
-//        $view->render();
-//    }
+    protected $_nologin_controller = true;
 
     /**
      * 解析身份证所在地址
@@ -120,10 +90,14 @@ class Idcarea_Controller extends Server_Controller
             $idcarea = new idcarea_Model($parentId);
             if(isset($idcarea->id) && $idcarea->id){
                 if(1 == $idcarea->the_level){
+                    $the_level = 2;
+                    if(in_array($idcarea->id, array(110000,120000,310000,500000))){
+                        $the_level = 3;
+                    }
                     $sql = sql::select('id, name')->
-                    from($idcarea->table)->
-                    where('id',' like ', substr($idcarea->id,0,2).'%')->
-                    and_c('the_level','=',2);
+                        from($idcarea->table)->
+                        where('id', ' like ', substr($idcarea->id, 0, 2) . '%')->
+                        and_c('the_level', '=', $the_level);
                     $this->ret['retData'] = $idcarea->db->query($sql);
                 }elseif(2 == $idcarea->the_level){
                     if(460200 == $idcarea->id){
