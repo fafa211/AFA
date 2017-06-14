@@ -51,13 +51,15 @@ class vote_record_Model extends Model
      *
      * 查询我参与的投票
      *
-     * @param $vote_id  投票ID
+     * @param $qiye_id  企业ID
+     * @param $uid  用户ID
      * @param $limit 读取条数, $limit == false时读取总条数
      * @return array 查询结果
      */
-    public function searchMyVotes($uid, $limit = "0,100"){
+    public function searchMyVotes($qiye_id, $uid, $limit = "0,100"){
 
         if($limit === false){
+            //暂时未加企业ID条件
             $sql = Sql::select('COUNT(DISTINCT vote_id) AS result_num', $this->table, array('uid' => $uid));
             return $this->db->getOne($sql);
         }else {
@@ -65,10 +67,11 @@ class vote_record_Model extends Model
 
             $sql = "select v.* FROM (
                       select * from (
-                        select vote_id,id from {$this->table} WHERE  uid='{$uid}'order by id desc
+                        select vote_id,id from {$this->table} WHERE  uid='{$uid}' order by id desc
                       ) as a group by a.vote_id
                     ) as vr".
                 " inner join {$vote->table} as v on v.id=vr.vote_id
+                where v.qiye_id = '{$qiye_id}'
                 order by vr.id desc
                 limit $limit";
 

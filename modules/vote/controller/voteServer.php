@@ -12,7 +12,7 @@ class voteServer_Controller extends Server_Controller
      * @var array $use_token 允许使用token进行授权访问的方法
      */
     protected $use_token = array('add','delete','lists','listCount','edit','show',
-        'listOptions','addOption','editOption','delOption','operateOption','selectOption','doneVotes','viewRecords','myDoneVotes');
+        'listOptions','addOption','editOption','delOption','operateOption','selectOption','viewRecords','myDoneVotes');
 
 
     public function __construct(Request $request)
@@ -61,8 +61,8 @@ class voteServer_Controller extends Server_Controller
             foreach ($post as $k => $v) {
                 $vote->$k = is_array($v) ? join(',', $v) : $v;
             }
-            $start_time = input::post('start_time');
-            $end_time = input::post('end_time');
+            $start_time = trim(input::post('start_time'));
+            $end_time = trim(input::post('end_time'));
             $vote->start_time = is_numeric($start_time)?$start_time:strtotime($start_time);
             $vote->end_time = is_numeric($end_time)?$end_time:strtotime($end_time);
 
@@ -215,7 +215,7 @@ class voteServer_Controller extends Server_Controller
      * qiye_id    企业(支队)ID
      * result_num 读取结果条数
      * page       当前页数
-     * flag       = all 全部, doing 进行中的, done 已结束
+     * flag       = all 全部, doing 进行中的, done 已结束, 若要同时读取进行中和已结束状态的投票, 可传值 doing,done
      *
      * @return 返回投票结果,格式如下
      * {
@@ -500,6 +500,7 @@ class voteServer_Controller extends Server_Controller
      *
      * qiye_id    企业(支队)ID
      * vote_id    投票ID
+     * option_id  投票选项ID
      * option_title      投票选项标题
      * option_pic  投票选项配图 file文件上传
      * option_text      投票选项说明
@@ -597,30 +598,28 @@ class voteServer_Controller extends Server_Controller
                 return;
             }
 
-            if($option_arr){
-                $option_arr = json_decode(input::post('option_arr'));
-                if(is_array($option_arr)){
-                    //文字投票类型时生效
-                    foreach($option_arr as $v){
-                        if(!isset($v->option_title) || empty($v->option_title)) continue; //忽略为空的选项
+            if (is_array($option_arr)) {
+                //文字投票类型时生效
+                foreach ($option_arr as $v) {
+                    $v = (object) $v;
+                    if (empty($v->option_title)) continue; //忽略为空的选项
 
-                        if($v->option_id) {
-                            //编辑
-                            $vote_option = new vote_option_Model($v->option_id);
-                            if($vote_option->vote_id != $vote->id) continue; //无权限
-                        }else{
-                            //新增
-                            $vote_option = new vote_option_Model();
-                            $vote_option->vote_id = $vote->id;
-                            $vote_option->add_time = time();
-                        }
-
-                        $vote_option->option_title = $v->option_title;
-                        $vote_option->option_text = isset($v->option_text)?$v->option_text:'';
-
-
-                        $vote_option->save();
+                    if ($v->option_id) {
+                        //编辑
+                        $vote_option = new vote_option_Model($v->option_id);
+                        if ($vote_option->vote_id != $vote->id) continue; //无权限
+                    } else {
+                        //新增
+                        $vote_option = new vote_option_Model();
+                        $vote_option->vote_id = $vote->id;
+                        $vote_option->add_time = time();
                     }
+
+                    $vote_option->option_title = $v->option_title;
+                    $vote_option->option_text = isset($v->option_text) ? $v->option_text : '';
+
+
+                    $vote_option->save();
                 }
             }
 
@@ -808,9 +807,10 @@ class voteServer_Controller extends Server_Controller
      * 需要传的参数为
      *
      * key        授权访问key
+     * qiye_id    企业(支队)ID
      * uid        用户ID
      * result_num 读取结果条数
-     * position   读取起始位置
+     * page       当前页数
      *
      * @return 返回投票结果,格式如下
      * {
@@ -836,15 +836,17 @@ class voteServer_Controller extends Server_Controller
      * }
      *
      */
-    public function doneVotes_Action()
+    public function myDoneVotes_Action()
     {
 
-        $uid = input::get('uid');  //企业(支队)ID
-        $result_num = input::get('result_num');
-        $position = input::get('position');
+        $qiye_id = input::get('qiye_id');  //企业(支队)ID
+        $uid = input::get('uid');  //前端用户ID
+        $result_num = input::get('result_num')?input::get('result_num'):5;//读取条数
+        $page = input::get('page')?input::get('page'):1;//起始位置
+        $position = ($page-1)*$result_num;
 
         $vote_record = new vote_record_Model();
-        $result = $vote_record->searchMyVotes($uid, 'id desc', "{$position},{$result_num}");
+        $result = $vote_record->searchMyVotes($qiye_id, $uid, "{$position},{$result_num}");
 
         $resultRtn = array();
         $now = time();
@@ -910,58 +912,6 @@ class voteServer_Controller extends Server_Controller
         $vote_recod = new vote_record_Model();
 
         $result = $vote_recod->search($vote_id, array('option_id'=>$option_id),'id desc',"{$position},{$result_num}");
-
-        $this->ret['retData'] = $result;
-
-        $this->echojson($this->ret);
-    }
-
-    /**
-     * 投票记录: 查看我参与的投票 vote_record
-     *
-     * 参数提交方式  GET
-     * 需要传的参数为
-     *
-     * key        授权访问key
-     * result_num 读取结果条数
-     * page       当前页数
-     * uid        用户ID
-     *
-     * @return 返回投票记录,格式如下
-     * {
-     *  "errNum":0,  //成功标识, 0 为成功 ,500为没有权限
-     *  "errMsg":"success",
-     *  "retData":[
-     * {"id":"5",                       投票ID
-     * "account_id":"4",
-     * "uid":"yyyyyy",                  //用户ID
-     * "qiye_id":"wqeuriopeqwiopru",
-     * "type":"1",                      //投票类型
-     * "title":"测试标题",               //投票标题
-     * "title_pic":"图片url地址",        //投票图片地址
-     * "about":"",                      //投票描述
-     * "start_time":"1491621976",       //开始时间
-     * "end_time":"1492226776",         //结束时间
-     * "option_setting":"2",
-     * "rate":"1",
-     * "add_time":"1491621976",         //创建时间
-     * "status":"进行中",                //状态
-     * "vote_num":0                     //投票总数
-     *  },{...}]
-     * }
-     *
-     */
-    public function myDoneVotes_Action()
-    {
-
-        $uid = input::get('uid');
-        $result_num = input::get('result_num')?input::get('result_num'):5;//读取条数
-        $page = input::get('page')?input::get('page'):1;//起始位置
-        $position = ($page-1)*$result_num;
-
-        $vote_recod = new vote_record_Model();
-
-        $result = $vote_recod->searchMyVotes($uid, "{$position}, {$result_num}");
 
         $this->ret['retData'] = $result;
 
