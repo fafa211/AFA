@@ -9,6 +9,11 @@ class Iparea_Controller extends Server_Controller
 {
 
     /**
+     * @var bool 无需登录/key授权验证
+     */
+    protected $_nologin_controller = true;
+
+    /**
      * 读取IP所在地区与运营商
      * @param string $ip
      * @return string json:
