@@ -73,3 +73,17 @@ $config['database'] = array(
 
 
 );// true为长久连接模式，false为短暂连接模式
+
+$config['email'] = array(
+    'driver'=>'smtp',       //验证方式
+    'options'=>array(
+        'hostname'=>'smtp.exmail.qq.com',     //邮件SMTP服务器地址
+        'username'=>'zhengsf@kingsum.com.cn',     //邮件帐号
+        'password'=>'Faaaaaa123',     //密码
+        //'encryption'=>'',   //加密方式
+        'from'=>'zhengsf@kingsum.com.cn',         //显示的发送邮件帐号
+        'port'=>25,         //邮件服务器端口号
+        'timeout'=>10,
+        //'auth'=>''
+    )
+);

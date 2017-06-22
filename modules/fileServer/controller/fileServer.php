@@ -156,16 +156,13 @@ class FileServer_Controller extends Server_Controller{
     public function uploadPic_Action($encrypt = 0){
 
         ini_set ('memory_limit', '256M');
-        //支持JS跨域上传文件,IE10以下浏览器不支持
-        header('Access-Control-Allow-Origin: * ');
-
 
         $file = input::file('file');
 
         if($file['error'] !== 0){
-            $this->ret['errNum'] = 1;
+            $this->ret['errNum'] = $file['error'];
             $this->ret['success'] = "文件上传失败";
-            $this->ret['retData'] = $file;
+            $this->ret['retData'] = input::file();
 
             return $this->echojson($this->ret);
         }

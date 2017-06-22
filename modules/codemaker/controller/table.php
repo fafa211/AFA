@@ -27,7 +27,9 @@ class Table_Controller extends Controller{
      */
     public function maker_Action(){
 
-        $this->makerAuthor();
+        //$this->makerAuthor();
+
+        //$this->makerVote();
 
         $this->echomsg("模型生成成功!");
     }
@@ -173,6 +175,42 @@ class Table_Controller extends Controller{
 
         return $rt;
 
+    }
+
+
+    /**
+     * 用数据表结构直接创建模块代码
+     * 只需要数据结构表的名称即可生成整个模块代码
+     *
+     */
+    private function makerVote(){
+        //////基本设置 -START //////
+        $module = 'vote';//模型名称
+        $model = 'vote';//通常与表名一致，也可以不一样，将生成 $model_Controller 和 $model_Model类文件
+        $table = 'votes';//表名
+        $prikey = 'id';//主键名
+        //////基本设置 - END//////
+
+        //////字段设置 -START //////
+        //不能为空字段
+        $require_arr = array('title', 'qiye_id', 'type','start_time','end_time','option_setting','rate');
+        //列表展示字段
+        $list_arr = array('title', 'qiye_id', 'type','start_time','end_time','option_setting','rate');
+        //创建页面需要填写字段
+        $create_arr = array('title', 'title_pic', 'qiye_id', 'type','start_time','end_time','option_setting','rate');
+        //编辑页面需要填写字段
+        $edit_arr = array('title', 'title_pic', 'qiye_id', 'type','start_time','end_time','option_setting','rate');
+        //特殊配置
+        $fileds_arr = array(
+            'title_pic'=>array('type'=>'file')
+        );
+        //////字段设置 -END //////
+
+        $fileds = $this->findFiledsSetting($table, $require_arr, $create_arr, $edit_arr, $list_arr, $fileds_arr);
+
+        //创建模块
+        $maker = new codemaker($module, $model, $table, $prikey, $fileds);
+        $maker->store();
     }
 
 

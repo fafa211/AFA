@@ -109,7 +109,7 @@ class docparse
             $data['api_name']    = $api_name;//接口名称
             $data['api_description']    = (isset($metadata['long_description'])?$metadata['long_description']:@$metadata['description']);
 
-            $path_url = F::config('domain').substr($api_name, 1);
+            $path_url = substr($api_name, 1);
 
             $param_arr = array();
 
