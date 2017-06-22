@@ -317,8 +317,15 @@ class sql {
             foreach ($arr as $k => $v) {
                 //$k为非数字时,为字段名称
                 if(is_numeric($k)){
-                    if(is_array($v) && count($v) == 3){
-                        $this->where($v[0], $v[1], $v[2]);
+                    if(is_array($v)){
+                        if(count($v) == 3) {
+                            $this->where($v[0], $v[1], $v[2]);
+                        }
+                    }else{
+                        if(count($arr) == 3){
+                            $this->where($arr[0], $arr[1], $arr[2]);
+                            break;
+                        }
                     }
                 }else {
                     $temp[] = "$k=" . self::escape($v) . "";

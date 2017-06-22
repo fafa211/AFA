@@ -27,16 +27,14 @@ class Email {
 		
 		if (! class_exists ( 'Swift', FALSE )) {
 			// Load SwiftMailer
-			rsystem('swift/Swift.php');
+			require('swift/Swift.php');
 			
 			// Register the Swift ClassLoader as an autoload
 			spl_autoload_register ( array ('Swift_ClassLoader', 'load' ) );
 		}
 		
 		// Load default configuration
-		
-
-		($config === NULL) and $config;
+		($config === NULL) and $config = F::config('email');
 		if (self::$options == NULL && isset ( $config ['options'] ))
 			self::$options = $config ['options'];
 		

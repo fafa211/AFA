@@ -546,6 +546,8 @@ class View {
 	 */
 	private function set_file($file)
 	{
+        if(is_file($file)) return $this->file = $file;
+
 		$c = substr($file, 0, 1);
 	    if ($c == DIRECTORY_SEPARATOR && file_exists($file . VIEW_EXT))
             $this->file = $file . VIEW_EXT;

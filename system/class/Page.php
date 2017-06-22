@@ -62,6 +62,9 @@ class Page
 	private $last = false; //是否默认为最后一页
 	private $text = '';    //分页内容
 
+	//分页模式-前端样式
+	private $mode = 1;
+
 	/**
 	 * 构造函数
 	 *
@@ -139,118 +142,169 @@ class Page
 	 * 分页显示
 	 */
 	public function __toString(){
-	    $setpage = $this->page ? ceil($this->page/$this->pernum) : 1;
-
-	    $pagenum = ($this->tpage > $this->pernum) ? $this->pernum : $this->tpage;
-	    
 	    if ($this->total == 0) return $this->text;
-	    
+        if ($this->mode == 1) return $this->modeOne();
+        if ($this->mode == 2) return $this->modeTwo();
+	}
 
-	    $this->text = "共".$this->total."个 ";
-	    if ($this->tpage == 1){
-	    	$this->text .= '共 1 页 当前页为第一页';
-	    	return $this->text;
-	    }
-	   
-	    $this->text .= '共 '.$this->tpage . ' 页 ';
-	    if ($this->page > 1){//当前页大于第1页
-	    	$pre = $this->page-1;
-	    	if ($this->page > 5){//当前页大于第5页
-	    		$this->text .= '<a href="'.$this->privatestr.'p=1" target="_self">&#171;第一页</a>';
-	    	}
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.$pre.'" target="_self">上一页</a>';
-	    }
-	    $i = ($setpage-1)*$this->pernum;
-	    /**
-	    for($j=$i; $j<($i+$pagenum+5) && $j<$this->tpage; $j++) {
-	    	$newpage = $j+1;
-	    	if ($this->page == $j+1){
-	    		$this->text .= '<span class="page_current">'.($j+1).'</span>';
-	    	}else{
-	    		$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
-	    	}
-	    }
-	    ///* « Previous  1 2 3 4 5 6 7 8 9 10 … 25 26  Next » 
-	    **/
-	    /**
-	     * 总的this->tpage
-	     * 当前this->page
-	     * 
-	     */
-	    /* « Previous  1 2 3 4 5 6 7 8 9 10 … 25 26  Next » */
-	    if($this->page<10&&$this->tpage<=10){
-	    	$i=0;
-	    	for($j=$i; $j<($i+$pagenum+3) && $j<$this->tpage; $j++) {
-	    		$newpage = $j+1;
-	    		if ($this->page == $j+1){
-	    			$this->text .= '<span class="page_current">'.($j+1).'</span>';
-	    		}else{
-	    			$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
-	    		}
-	    	}
-	    	
-	    }
-	    
-	    if($this->page<10&&$this->tpage>10){
-	    	$i=0;
-	    	for($j=$i; $j<($i+$pagenum+3) && $j<$this->tpage; $j++) {
-	    		$newpage = $j+1;
-	    		if ($this->page == $j+1){
-	    			$this->text .= '<span class="page_current">'.($j+1).'</span>';
-	    		}else{
-	    			$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
-	    		}
-	    	}
-	    	$this->text .= '&hellip;';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.($this->tpage-1).'" target="_self">'.($this->tpage-1).'</a>';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">'.($this->tpage).'</a>';
-	    }
-	    /* « Previous  1 2 … 17 18 19 20 21 22 23 24 25 26  Next » */
-	    if($this->page>=10&&$this->page>$this->tpage-6){
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.(1).'" target="_self">'.(1).'</a>';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.(2).'" target="_self">'.(2).'</a>';
-	    	$this->text .= '&hellip;';
-	    	$i = $this->tpage-6;
-	    	for($j=$i; $j<($i+$pagenum+5) && $j<$this->tpage; $j++) {
-	    		$newpage = $j+1;
-	    		if ($this->page == $j+1){
-	    			$this->text .= '<span class="page_current">'.($j+1).'</span>';
-	    		}else{
-	    			$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
-	    		}
-	    	}
-	    }
-	    /* « Previous  1 2 … 17 18 19 20 21 22 23 24 25 26 ... 56 57 58  Next » */
-	    if($this->page>=10&&$this->page<=$this->tpage-6){
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.(1).'" target="_self">'.(1).'</a>';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.(2).'" target="_self">'.(2).'</a>';
-	    	$this->text .= '&hellip;';
-	    	$i = $this->page-3;
-	    	for($j=$i; $j<($i+$pagenum) && $j<$this->tpage; $j++) {
-	    		$newpage = $j+1;
-	    		if ($this->page == $j+1){
-	    			$this->text .= '<span class="page_current">'.($j+1).'</span>';
-	    		}else{
-	    			$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
-	    		}
-	    	}
+	/**
+	 * 分页模式 - 前端样式区别
+	 */
+	public function setMode($mode = 1){
+		$this->setMode($mode);
+	}
 
-	    	$this->text .= '&hellip;';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.($this->tpage-1).'" target="_self">'.($this->tpage-1).'</a>';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">'.($this->tpage).'</a>';
+	/**
+     * 模式1
+     * 全面分页模式
+	 * @return string 默认分页方式
+	 */
+    public function modeOne(){
+        $setpage = $this->page ? ceil($this->page/$this->pernum) : 1;
 
-	    }
-	    
-	    
-	    
-	    	    
-	    if ($this->page < $this->tpage){//当前页小于最大页
-	    	$next = $this->page+1;
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.$next.'" target="_self">下一页</a>';
-	    	$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">末页&#187;</a>';
-	    }
+        $pagenum = ($this->tpage > $this->pernum) ? $this->pernum : $this->tpage;
 
-	    return '<div class="page_class"><div class="page_class_bg">'.$this->text.'</div></div>';
+		$this->text = "共".$this->total."个 ";
+		if ($this->tpage == 1){
+			$this->text .= '共 1 页 当前页为第一页';
+			return $this->text;
+		}
+
+		$this->text .= '共 '.$this->tpage . ' 页 ';
+		if ($this->page > 1){//当前页大于第1页
+			$pre = $this->page-1;
+			if ($this->page > 5){//当前页大于第5页
+				$this->text .= '<a href="'.$this->privatestr.'p=1" target="_self">&#171;第一页</a>';
+			}
+			$this->text .= '<a href="'.$this->privatestr.'p='.$pre.'" target="_self">上一页</a>';
+		}
+		$i = ($setpage-1)*$this->pernum;
+		/**
+		for($j=$i; $j<($i+$pagenum+5) && $j<$this->tpage; $j++) {
+		$newpage = $j+1;
+		if ($this->page == $j+1){
+		$this->text .= '<span class="page_current">'.($j+1).'</span>';
+		}else{
+		$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
+		}
+		}
+		///* « Previous  1 2 3 4 5 6 7 8 9 10 … 25 26  Next »
+		 **/
+		/**
+		 * 总的this->tpage
+		 * 当前this->page
+		 *
+		 */
+		/* « Previous  1 2 3 4 5 6 7 8 9 10 … 25 26  Next » */
+		if($this->page<10&&$this->tpage<=10){
+			$i=0;
+			for($j=$i; $j<($i+$pagenum+3) && $j<$this->tpage; $j++) {
+				$newpage = $j+1;
+				if ($this->page == $j+1){
+					$this->text .= '<span class="page_current">'.($j+1).'</span>';
+				}else{
+					$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
+				}
+			}
+
+		}
+
+		if($this->page<10&&$this->tpage>10){
+			$i=0;
+			for($j=$i; $j<($i+$pagenum+3) && $j<$this->tpage; $j++) {
+				$newpage = $j+1;
+				if ($this->page == $j+1){
+					$this->text .= '<span class="page_current">'.($j+1).'</span>';
+				}else{
+					$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
+				}
+			}
+			$this->text .= '&hellip;';
+			$this->text .= '<a href="'.$this->privatestr.'p='.($this->tpage-1).'" target="_self">'.($this->tpage-1).'</a>';
+			$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">'.($this->tpage).'</a>';
+		}
+		/* « Previous  1 2 … 17 18 19 20 21 22 23 24 25 26  Next » */
+		if($this->page>=10&&$this->page>$this->tpage-6){
+			$this->text .= '<a href="'.$this->privatestr.'p='.(1).'" target="_self">'.(1).'</a>';
+			$this->text .= '<a href="'.$this->privatestr.'p='.(2).'" target="_self">'.(2).'</a>';
+			$this->text .= '&hellip;';
+			$i = $this->tpage-6;
+			for($j=$i; $j<($i+$pagenum+5) && $j<$this->tpage; $j++) {
+				$newpage = $j+1;
+				if ($this->page == $j+1){
+					$this->text .= '<span class="page_current">'.($j+1).'</span>';
+				}else{
+					$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
+				}
+			}
+		}
+		/* « Previous  1 2 … 17 18 19 20 21 22 23 24 25 26 ... 56 57 58  Next » */
+		if($this->page>=10&&$this->page<=$this->tpage-6){
+			$this->text .= '<a href="'.$this->privatestr.'p='.(1).'" target="_self">'.(1).'</a>';
+			$this->text .= '<a href="'.$this->privatestr.'p='.(2).'" target="_self">'.(2).'</a>';
+			$this->text .= '&hellip;';
+			$i = $this->page-3;
+			for($j=$i; $j<($i+$pagenum) && $j<$this->tpage; $j++) {
+				$newpage = $j+1;
+				if ($this->page == $j+1){
+					$this->text .= '<span class="page_current">'.($j+1).'</span>';
+				}else{
+					$this->text .= '<a href="'.$this->privatestr.'p='.$newpage.'" target="_self">'.($j+1).'</a>';
+				}
+			}
+
+			$this->text .= '&hellip;';
+			$this->text .= '<a href="'.$this->privatestr.'p='.($this->tpage-1).'" target="_self">'.($this->tpage-1).'</a>';
+			$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">'.($this->tpage).'</a>';
+
+		}
+
+
+
+
+		if ($this->page < $this->tpage){//当前页小于最大页
+			$next = $this->page+1;
+			$this->text .= '<a href="'.$this->privatestr.'p='.$next.'" target="_self">下一页</a>';
+			$this->text .= '<a href="'.$this->privatestr.'p='.$this->tpage.'" target="_self">末页&#187;</a>';
+		}
+
+		return '<div class="page_class"><div class="page_class_bg">'.$this->text.'</div></div>';
+	}
+
+    /**
+     * 模式2
+     * 简要分页模式-前端样式
+     * @return string
+     */
+    public function modeTwo(){
+        if ($this->tpage == 1){
+            return $this->text;
+        }
+
+        if($this->page > $this->tpage){
+            $this->page = $this->tpage;
+        }
+
+        if ($this->page > 1){//当前页大于第1页
+            $pre = $this->page-1;
+            $this->text .= '<a href="'.$this->privatestr.'p='.$pre.'" class="downup" target="_self">上一页</a>';
+        }
+
+        //里面的页码
+        for($i=1; $i<=$this->tpage ; $i++ ){
+            if($i == $this->page){
+                $this->text .= "<b>{$i}</b>";
+            }else{
+                $this->text .= '<a href="' . $this->privatestr . 'p=' . $i . '" target="_self">' . $i . '</a>';
+            }
+        }
+
+        if ($this->page < $this->tpage) {//当前页大于第1页
+            $next = $this->page + 1;
+            $this->text .= '<a href="' . $this->privatestr . 'p=' . $next . '" class="downup" target="_self">下一页</a>';
+        }
+
+        return $this->text;
 	}
 	
 	/**
