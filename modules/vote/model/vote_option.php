@@ -16,6 +16,7 @@ class vote_option_Model extends Model
         'vote_id' => '',
         'option_title' => '',
         'option_pic' => '',
+        'option_text'=>'',
         'votes' => 0,
         'add_time' => '',
     );

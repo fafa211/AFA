@@ -47,6 +47,7 @@
 <label name="rate" for="inputrate" class="control-label">投票频率:1 每人一票，2每天一票</label>
 <input type="text" name="rate" class="form-control" id="inputrate" placeholder="投票频率:1 每人一票，2每天一票" value="<?php echo $vote->rate;?>" required>
 </div>
+    <input type="hidden" name="vote_id" value="<?php echo $vote->id;?>" />
 <button type="sumbit" class="btn btn-default">提交</button>
 </form>
 <a href="javascript:history.go(-1);">返回</a>
