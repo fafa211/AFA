@@ -368,21 +368,15 @@ class Model {
 	protected $module;
 	//数据库配置
 	protected $config;
+    //字段名称
+    protected $fileds = array();
+
 	
 	//主键字段，通常为自增ID字段
 	protected $primary = 'id';
 	public function __construct($id = null){
 		$this->db = db::instance($this->module?$this->module:'default');
-		if ($id){
-		    $sql = sql::select('*', $this->table, array("$this->primary"=>$id));
-			$orm = $this->db->getOneResult($sql);
-			if ($orm){
-                foreach ($orm as $k => $v) {
-                    $this->$k = $v;
-                }
-            }
-			unset($orm);
-		}
+		return $this->get($id);
 	}
 	
 	/**
@@ -465,6 +459,25 @@ class Model {
             ->render();
         return $this->db->getOne($sql);
     }
+
+    /**
+     * 读取单条记录
+     * @param int/string $id
+     * @return $this
+     */
+    public function get($id){
+        if ($id){
+            $sql = sql::select('*', $this->table, array("$this->primary"=>$id));
+            $orm = $this->db->getOneResult($sql);
+            if ($orm){
+                foreach ($orm as $k => $v) {
+                    $this->$k = $v;
+                }
+                return (object) $orm;
+            }
+        }
+        return null;
+    }
 	
 	public function __get($name){
 	    return isset($this->$name)?$this->$name:'';
@@ -473,6 +486,17 @@ class Model {
 	public function __set($name, $value){
 	    $this->$name = $value;
 	}
+
+
+    public function __toString()
+    {
+        $class = new stdClass();
+        $class->{$this->primary} = $this->{$this->primary};
+        foreach($this->fileds as $key=>$value){
+            $class->$key = $this->$key;
+        }
+        return (string) $class;
+    }
 
 }
 
