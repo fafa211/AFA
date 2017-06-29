@@ -20,7 +20,7 @@ abstract class Cache {
 	 */
 	public static function instance($group = NULL)
 	{
-		$config = F::config('cache.'.$group);
+		$config = F::config('cache'.($group?'.'.$group:""));
 		if($group === NULL){
 			$group = $config["driver"];
 		}
@@ -30,6 +30,7 @@ abstract class Cache {
 		    $file = F::find_file('driver', 'cache/'.$config["driver"]);
 	   		$file && include $file;
 		}
+		if(isset($config[$group])) $config = $config[$group];
 		
 		Cache::$instances[$group] = new $cache_class($config);
 		// Return the instance

@@ -10,7 +10,17 @@ class Cache_Memcache extends cache{
 	
 	protected $_flags;
 
-	protected $_default_config = array();
+	protected $_default_config = array(
+		'host'             => '127.0.0.1',
+		'port'             => 11211,
+		'persistent'       => FALSE,
+		'weight'           => 2,
+		'timeout'          => 5,
+		'retry_interval'   => 15,
+		'status'           => TRUE,
+		'instant_death'	   => TRUE,
+		'lifetime'		   => 3600,
+		'failure_callback' => array());
 
 	public function _sanitize_id($id)
 	{
@@ -26,20 +36,12 @@ class Cache_Memcache extends cache{
 		}
 		parent::__construct($config);
 		$this->_memcache = new Memcache;
-		$this->_config = $config;
 		$server = $config;
 		// Setup default server configuration
-		$this->_default_config = array(
-		'host'             => '192.168.1.62',
-		'port'             => 11211,
-		'persistent'       => FALSE,
-		'weight'           => 2,
-		'timeout'          => 5,
-		'retry_interval'   => 15,
-		'status'           => TRUE,
-		'instant_death'	   => TRUE,
-		'failure_callback' => array($this, '_failed_request'),
-		);
+		$this->_default_config['failure_callback'] = array($this, '_failed_request');
+
+		$server = $this->_config = array_merge($this->_default_config, $config);
+
 		//$server =$this->_default_config;
 		if(!$this->_memcache->addServer($server['host'], $server['port'], $server['persistent'], $server['weight'], $server['timeout'], $server['retry_interval'], $server['status'], $server['failure_callback']))
 		{
@@ -65,8 +67,11 @@ class Cache_Memcache extends cache{
 	}
 
 
-	public function set($id, $data, $lifetime = 3600)
+	public function set($id, $data, $lifetime = false)
 	{
+		if($lifetime === false){
+			$lifetime = $this->_config['lifetime'];
+		}
 		// If the lifetime is greater than the ceiling
 		if ($lifetime > Cache_Memcache::CACHE_CEILING)
 		{
