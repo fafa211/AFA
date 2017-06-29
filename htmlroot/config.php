@@ -31,19 +31,6 @@ $config['upload'] = array(
 //加解密秘钥
 $config['authkey'] = 'sj323TY#@w1&$qw21';
 
-//缓存设置
-$config['cache'] = array(
-    'driver' => 'file',
-    'cache_dir' => PROROOT.DIRECTORY_SEPARATOR.'runtime'.DIRECTORY_SEPARATOR.'cache',
-    'default_expire' => 3600,
-);
-
-//日志路径
-$config['cache'] = array(
-    'driver' => 'file',
-    'log_dir' => PROROOT.DIRECTORY_SEPARATOR.'runtime'.DIRECTORY_SEPARATOR.'log',
-);
-
 //数据库设置, 支持多数据库, 支持主从
 $config['database'] = array(
     'default' => array(//默认数据库
