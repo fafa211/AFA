@@ -325,6 +325,8 @@ class sql {
                         if(count($arr) == 3){
                             $this->where($arr[0], $arr[1], $arr[2]);
                             break;
+                        }else{
+                            $this->where($v);
                         }
                     }
                 }else {
