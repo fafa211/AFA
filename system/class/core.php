@@ -388,7 +388,14 @@ class Model {
 	    $insert = false;
 	    foreach ($this->fileds as $f=>$v){
 	        if ($f == $this->primary) continue;
-	        $fieldsArr[$f] = isset($this->$f)?$this->$f:$v;
+            if( isset($this->$f)){
+                if($this->$f === '' && $v == 0) {
+                    $this->$f = $v;
+                }
+                $fieldsArr[$f] = $this->$f;
+            }else {
+                $fieldsArr[$f] = $v;
+            }
 	    }
 	    if ($this->{$this->primary}){
 	        $sql = sql::update($fieldsArr, $this->table, array("{$this->primary}"=>$this->{$this->primary}));
@@ -396,7 +403,7 @@ class Model {
 	        $insert = true;
 	        $sql = sql::insert($fieldsArr, $this->table);
 	    }
-
+//echo $sql;die;
 	    $flag = $this->db->exec($sql);
 	    if ($flag && $insert){
 	        //插入数据后更新当前数据的ID
