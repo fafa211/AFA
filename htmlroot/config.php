@@ -25,7 +25,8 @@ $config['page'] = array(
 //上传设置
 $config['upload'] = array(
     'direct' => DOCROOT.DIRECTORY_SEPARATOR.'upload',
-    'size' => 2097152
+    'size' => 2097152,
+    'domain'=>"http://f1.afacms.com/"
 );
 
 //加解密秘钥
