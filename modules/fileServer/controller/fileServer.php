@@ -51,22 +51,39 @@ class FileServer_Controller extends Server_Controller{
         //支持JS跨域上传文件,IE10以下浏览器不支持
         header('Access-Control-Allow-Origin：* ');
 
-        $file = input::file('file');
+        $filename = input::request('fileVal')?input::request('fileVal'):'file';
+        $file = input::file($filename);
 
-        if($file['error'] !== 0){
-            $this->ret['errNum'] = 1;
-            $this->ret['errMsg'] = "文件上传失败";
-            $this->ret['retData'] = $file;
+        //使用二进制传输标识
+        $sendbybinary = false;
+        if(!empty( $file )) {
+            if ($file['error'] !== 0) {
+                $this->ret['errNum'] = 1;
+                $this->ret['errMsg'] = "文件上传失败";
+                $this->ret['retData'] = $file;
 
-            return $this->echojson($this->ret);
+                return $this->echojson($this->ret);
+            }
+            if(input::post('name') && input::post('type')) {
+                $file['name'] = input::post('name');
+                $file['type'] = input::post('type');
+            }
+        }else{
+            $sendbybinary = true;
         }
+//print_r(input::post());print_r($file);die;
 
-        if(input::post('name') && input::post('type')) {
-            $file['name'] = input::post('name');
-            $file['type'] = input::post('type');
+        //支持post 和 二进制流 两种上传方式
+        $post = array('name'=>input::request('name'),
+            'chunk'=>input::request('chunk'),
+            'chunks'=>input::request('chunks'),
+            'id'=>input::request('id'));
+        if($sendbybinary || intval($post["chunks"]) >= 1 ){
+            $fileinfoArr = $this->uploadShard($post, $file);
+            if(is_bool($fileinfoArr)) return $this->echojson($this->ret);
+        }else {
+            $fileinfoArr = Upload::saveHash($file);
         }
-
-        $fileinfoArr = Upload::saveHash($file);
 
         if(false === $fileinfoArr){
             $this->ret['errNum'] = 1;
@@ -78,9 +95,9 @@ class FileServer_Controller extends Server_Controller{
         //文件信息保存入库
         $fileinfo = new fileinfo_Model();
         $fileinfo->account_id   = $this->account_id;
-        $fileinfo->file_name    = $file['name'];
-        $fileinfo->file_type    = $file['type'];
-        $fileinfo->file_size    = $file['size'];
+        $fileinfo->file_name    = input::request('name')?input::request('name'):$file['name'];
+        $fileinfo->file_type    = input::request('type')?input::request('type'):$file['type'];
+        $fileinfo->file_size    = isset($fileinfoArr['size'])?$fileinfoArr['size']:$file['size'];
         $fileinfo->add_time     = time();
 
         //加密时需要对返回的hash_id进行一次再加密
@@ -100,7 +117,12 @@ class FileServer_Controller extends Server_Controller{
         if($encrypt == 1){
             $this->ret['retData']['url'] = '';
         }else{
-            $return_url = str_replace(DOCROOT.DIRECTORY_SEPARATOR, F::config('domain'), $fileinfoArr['filename']);
+            $config = F::config('upload');
+            if(isset($config['domain'])){
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR .'upload'. DIRECTORY_SEPARATOR, $config['domain'], $fileinfoArr['filename']);
+            }else {
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR, F::config('domain'), $fileinfoArr['filename']);
+            }
             $this->ret['retData']['url'] = $return_url;
         }
 
@@ -156,13 +178,17 @@ class FileServer_Controller extends Server_Controller{
     public function uploadPic_Action($encrypt = 0){
 
         ini_set ('memory_limit', '256M');
+        //支持JS跨域上传文件,IE10以下浏览器不支持
+        header('Access-Control-Allow-Origin: * ');
 
-        $file = input::file('file');
+
+        $filename = input::post('fileVal')?input::post('fileVal'):'file';
+        $file = input::file($filename);
 
         if($file['error'] !== 0){
-            $this->ret['errNum'] = $file['error'];
+            $this->ret['errNum'] = 1;
             $this->ret['success'] = "文件上传失败";
-            $this->ret['retData'] = input::file();
+            $this->ret['retData'] = $file;
 
             return $this->echojson($this->ret);
         }
@@ -172,8 +198,8 @@ class FileServer_Controller extends Server_Controller{
             $file['type'] = input::post('type');
         }
 
-        $size_arr = input::post('size')?json_decode(input::post('size'), true):array();
-
+        $size_arr = input::post('sizearr')?json_decode(input::post('sizearr'), true):array();
+//print_r(input::post());print_r($file);die;
         $fileinfoArr = Upload::saveHash($file);
 
         if(is_array($fileinfoArr)) {
@@ -396,11 +422,23 @@ class FileServer_Controller extends Server_Controller{
 
         if ($has_small){
             $filesmall = $prefix.'_s'.'.'.$suffix;
-            $return_url = str_replace(DOCROOT.DIRECTORY_SEPARATOR, F::config('domain'), $filesmall);
+
+            $config = F::config('upload');
+            if(isset($config['domain'])){
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR .'upload'. DIRECTORY_SEPARATOR, $config['domain'], $filesmall);
+            }else {
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR, F::config('domain'), $filesmall);
+            }
+
             //删除原图
             unlink($image_file);
         }else{
-            $return_url = str_replace(DOCROOT.DIRECTORY_SEPARATOR, F::config('domain'), $image_file);
+            $config = F::config('upload');
+            if(isset($config['domain'])){
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR .'upload'. DIRECTORY_SEPARATOR, $config['domain'], $image_file);
+            }else {
+                $return_url = str_replace(DOCROOT . DIRECTORY_SEPARATOR, F::config('domain'), $image_file);
+            }
         }
         return array('count'=>$count, 'url'=>$return_url);
     }
@@ -466,6 +504,133 @@ class FileServer_Controller extends Server_Controller{
         return $this->echojson($this->ret);
 
 
+    }
+
+
+    /**
+     * 大文件切片上传
+     * @param $post
+     * @param $file_arr
+     * @return bool/array
+     */
+    private function uploadShard($post, $file_arr){
+        // 5 minutes execution time
+        @set_time_limit(5 * 60);
+
+        //临时存放目录
+        $tempDir = DOCROOT . DIRECTORY_SEPARATOR. 'temp'.DIRECTORY_SEPARATOR;
+
+        $cleanupTargetDir = true; // 开启文件缓存删除
+        $maxFileAge = 60*60*24; // 文件缓存时间超过时间自动删除
+
+        // Post 或 file 方式获取文件名
+        $fileName = isset($post["name"])?$post["name"]:$file_arr['name'];
+
+        $oldName = $fileName;//记录文件原始名字
+        $filePath = $tempDir . $fileName;
+
+        // Chunking might be enabled
+        $chunk = isset($post["chunk"]) ? intval($post["chunk"]) : 0;
+        $chunks = isset($post["chunks"]) ? intval($post["chunks"]) : 1;
+        // 删除缓存校验
+        if ($cleanupTargetDir) {
+            $dir = opendir($tempDir);
+            while (($file = readdir($dir)) !== false) {
+                $tmpfilePath = $tempDir  . $file;
+                // If temp file is current file proceed to the next
+                if ($tmpfilePath == "{$filePath}_{$chunk}.part" || $tmpfilePath == "{$filePath}_{$chunk}.parttmp") {
+                    continue;
+                }
+                // Remove temp file if it is older than the max age and is not the current file
+                if (preg_match('/\.(part|parttmp|mp4|pptx|ppt|mp3)$/', $file) && (@filemtime($tmpfilePath) < time() - $maxFileAge)) {
+                    @unlink($tmpfilePath);
+                }
+            }
+            closedir($dir);
+        }
+        //$this->ret['jsonrpc'] = "2.0";
+        $this->ret['id'] = @$post['id'];
+
+        // 打开并写入缓存文件
+        if (!$out = @fopen("{$filePath}_{$chunk}.parttmp", "wb")) {
+            $this->ret['errNum'] = 102;
+            $this->ret['errMsg'] = "Failed to open output stream";
+            return false;
+        }
+        if (!empty($file_arr) && @$file_arr["tmp_name"]) {
+            if ($file_arr["error"] || !is_uploaded_file($file_arr["tmp_name"])) {
+                $this->ret['errNum'] = 103;
+                $this->ret['errMsg'] = "Failed to move uploaded file.";
+                return false;
+            }
+            // Read binary input stream and append it to temp file
+            if (!$in = @fopen($file_arr["tmp_name"], "rb")) {
+                $this->ret['errNum'] = 101;
+                $this->ret['errMsg'] = "Failed to open input stream.";
+                return false;
+            }
+        } else {
+            if (!$in = @fopen("php://input", "rb")) {
+                $this->ret['errNum'] = 101;
+                $this->ret['errMsg'] = "Failed to open input stream.";
+                return false;
+            }
+        }
+        while ($buff = fread($in, 4096)) {
+            fwrite($out, $buff);
+        }
+        @fclose($out);
+        @fclose($in);
+        rename("{$filePath}_{$chunk}.parttmp", "{$filePath}_{$chunk}.part");
+        $index = 0;
+        $done = true;
+        for( $index = 0; $index < $chunks; $index++ ) {
+            if ( !file_exists("{$filePath}_{$index}.part") ) {
+                $done = false;
+                break;
+            }
+        }
+        //文件全部上传 执行合并文件
+        if ( $done ) {
+            if(empty($file_arr)){
+                $saveinfo = Upload::createRandFile();
+                $postion = strrpos($post['name'], '.');
+                $suffix = substr($post['name'], $postion);
+                $saveinfo['filename'] = $saveinfo['filename'].$suffix;
+                $saveinfo['suffix'] = substr($suffix, 1);
+
+                $uploadPath = $saveinfo['filename'];
+            }else {
+                $saveinfo = Upload::getSaveInfo($file_arr);
+                $uploadPath = $saveinfo['filename'];
+            }
+            if (!$out = @fopen($uploadPath, "wb")) {
+                $this->ret['errNum'] = 102;
+                $this->ret['errMsg'] = "Failed to open output stream.";
+                return false;
+            }
+            if ( flock($out, LOCK_EX) ) {
+                for( $index = 0; $index < $chunks; $index++ ) {
+                    if (!$in = @fopen("{$filePath}_{$index}.part", "rb")) {
+                        break;
+                    }
+                    while ($buff = fread($in, 4096)) {
+                        fwrite($out, $buff);
+                    }
+                    @fclose($in);
+                    @unlink("{$filePath}_{$index}.part");
+                }
+                flock($out, LOCK_UN);
+            }
+            @fclose($out);
+
+            //读取文件大小
+            $saveinfo['size'] = filesize($uploadPath);
+
+            return $saveinfo;
+        }
+        $this->ret['retData']['url'] = '';
+        return true;
     }
 
 

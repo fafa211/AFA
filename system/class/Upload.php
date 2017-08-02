@@ -39,7 +39,7 @@ class Upload {
     );
 
     public static $file_types = array(
-        'txt','doc','pdf','rar','zip','png','jpg','gif','xls','xlsx','docx','pptx','cvs','tar','gz'
+        'txt','doc','pdf','rar','zip','png','jpg','gif','xls','xlsx','doc','docx','ppt','pptx','cvs','tar','gz','mp4','mp3','avi',
     );
 
 	/**
@@ -150,38 +150,79 @@ class Upload {
 			return FALSE;
 		}
 
-		//文件唯一标识ID
-		$hash_id = md5($file['tmp_name'].'-'.uniqid());
+        $save_info = self::getSaveInfo($file);
 
-		// Use the default filename, with a timestamp pre-pended
-		$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if(!in_array($ext, self::$file_types)) return false;
-
-        //文件名称
-		$filename = $hash_id . '.' . $ext;
-        //文件存储目录
-		$directory = self::getDirectory($hash_id);
-        //创建文件存储目录
-		$flag = common::createDir($directory);
-		if(!$flag) {
-			throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
-		}
-
-		// Make the filename into a complete path
-		$filename = $directory.DIRECTORY_SEPARATOR.$filename;
-
-		if (move_uploaded_file($file['tmp_name'], $filename))
+		if ($save_info !== false && move_uploaded_file($file['tmp_name'], $save_info['filename']))
 		{
 			// Return new file path
-			return array(
-				'hash_id'=>$hash_id,
-				'suffix'=>$ext,
-				'filename'=>$filename
-			);
+			return $save_info;
 		}
 
 		return FALSE;
 	}
+
+    /**
+     * @param $file
+     * @return array|bool
+     * @throws Exception
+     */
+	public static function getSaveInfo($file){
+        //文件唯一标识ID
+        $hash_id = md5($file['tmp_name'].'-'.uniqid());
+
+        // Use the default filename, with a timestamp pre-pended
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if(!in_array($ext, self::$file_types)) return false;
+
+        //文件名称
+        $filename = $hash_id . '.' . $ext;
+        //文件存储目录
+        $directory = self::getDirectory($hash_id);
+        //创建文件存储目录
+        $flag = common::createDir($directory);
+        if(!$flag) {
+            throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
+            return false;
+        }
+
+        // Make the filename into a complete path
+        $filename = $directory.DIRECTORY_SEPARATOR.$filename;
+
+        return array(
+            'hash_id'=>$hash_id,
+            'suffix'=>$ext,
+            'filename'=>$filename
+        );
+    }
+
+    /**
+     * 生成一个随机的文件信息
+     * @return array
+     * @throws Exception
+     */
+	public static function createRandFile(){
+        //文件唯一标识ID
+        $hash_id = md5(uniqid());
+
+        //文件名称
+        $filename = $hash_id;
+        //文件存储目录
+        $directory = self::getDirectory($hash_id);
+        //创建文件存储目录
+        $flag = common::createDir($directory);
+        if(!$flag) {
+            throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
+            return false;
+        }
+
+        // Make the filename into a complete path
+        $filename = $directory.DIRECTORY_SEPARATOR.$filename;
+
+        return array(
+            'hash_id'=>$hash_id,
+            'filename'=>$filename
+        );
+    }
 
     /**
      * @param $hash_id 文件唯一hash_id
