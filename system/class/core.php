@@ -502,7 +502,7 @@ class Model {
         foreach($this->fileds as $key=>$value){
             $class->$key = $this->$key;
         }
-        return (string) $class;
+        return F::json_encode($class);
     }
 
 }
@@ -707,6 +707,7 @@ class AfaException {
                 break;
                 
         }
+        if(!USE_SWOOLE) exit(0);
         return true;
     }
 
@@ -798,6 +799,11 @@ class Load {
 	
 	static function loadClass($class_name)
 	{
+        //modules 支持命名空间自动加载
+        $class_dir = str_replace('\\', '/', $class_name);
+        $class_file = MODULEPATH.strtolower($class_dir).EXT;
+        if(file_exists($class_file)) return include $class_file;
+
 	    if (strpos($class_name, '_') === false){
 			if (($c = substr($class_name,0,1)) === strtolower($c)){
 			    return self::loadModule($class_name, 'helper');
@@ -855,6 +861,10 @@ class Load {
 	        foreach (self::$modules as $module => $dir) {
 	            $file = $dir . $type . DIRECTORY_SEPARATOR . $class_name . EXT;
 	            if (file_exists($file)) return include ($file);
+                else{
+                    $file = $dir . $type . DIRECTORY_SEPARATOR . lcfirst($class_name) . EXT;
+                    if (file_exists($file)) return include ($file);
+                }
 	        }
 	    }
         $file = APPPATH . $type . DIRECTORY_SEPARATOR . lcfirst($class_name) . EXT;
