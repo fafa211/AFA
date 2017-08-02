@@ -396,4 +396,40 @@ class F{
         }
 
     }
+
+    /**
+     * @param $key 通过key读取Token
+     * @return token
+     */
+    public static function getToken($key){
+        if(!empty($key)){
+            //账户key授权验证
+            $keystr = F::authstr($key, 'DECODE');
+            $keyarr = explode(',', $keystr);
+
+            if (count($keyarr) > 1 && is_numeric($keyarr[0]) && $keyarr[0]) {
+                $account_id = $keyarr[0]; //为授权用户 ID
+                return F::authstr($account_id.','.time(), 'ENCODE');
+            }
+        }
+        return '';
+    }
+}
+
+/**
+ * @param $str
+ */
+function _e($str){
+    $param = func_get_args();
+    $param_num = func_num_args();
+    if(1 == $param_num) {
+        echo $str;
+    }elseif(2 == $param_num){
+        printf($str, $param[1]);
+    }elseif(3 == $param_num){
+        printf($str, $param[1],  $param[2]);
+    }else{
+        printf($str, $param[1],  $param[2],  $param[3]);
+    }
+    return true;
 }
