@@ -13,43 +13,43 @@ class FileServer_Controller extends Server_Controller{
 
     /**
      * 上传文件服务
+     * token  GET  授权token,通过key在后端调用服务接口取得
+     * name   GET/POST  文件名称,带后缀: 二进制传输时不能为空
+     * type   GET/POST  文件类型: 二进制传输时不能为空
+     * size   GET/POST  文件大小: 二进制传输时不能为空
+     * chunk  GET/POST  当前分片编号,从0开始
+     * chunks GET/POST  分片总数
+     * id     GET/POST  上传文件ID WU_FILE_0
      *
-     * 使用POST提交文件,需要提供以下参数
-     * name  上传文件里的  $_FILES 里相应文件的的 name属性
-     * type  上传文件里的  $_FILES 里相应文件的的 type属性
-     * file  上传文件里的  $_FILES 里相应文件的的 tmp_name属性
-     *
-     * 例子: 比如上传的某个文件的属性如下
-     *
-     * Array
-     * (
-     * [name] => 微信＋销售通道.png
-     * [type] => image/png
-     * [tmp_name] => /private/var/tmp/phpz2nNKg
-     * [error] => 0
-     * [size] => 1794128
-     * )
-     *
-     * name 的值对应为 微信＋销售通道.png
-     * type 的值对应为 image/png
-     * file 的值对应为 AT/private/var/tmp/phpz2nNKg
-     * 注意:file 值前面一定要有AT符号,用来识别其是一个POST文件,使用CRUL POST进行提交
+     * file 普通表单file类型上传 或 二进制类型文件内容上传
      *
      * @param boolean $encrypt :0或1
      * 0 为不加密, 默认为0, 为0时将会直接返回可访问的文件地址;
      * 1为加密, 不会返回可访问地址,需要经过授权, 通过指定接口才能访问;
      *
-     * @return json 图片url
-     * {
-     *  "errNum":0, //成功标识, 0 为成功
-     *  "errMsg":"success",
-     *  "retData":"http://api.service.com/upload/20160825/sc_57beac8f9bf69.png" //图片地址
+     * @return json {
+     * "errNum":0,          //0标识成功
+     * "errMsg":"success",  //成功描述
+     * "retData":{
+     * "id":"fb9a120649ab510fc22d1b0adec0e006",     //文件唯一标识ID
+     * "name":"ULUCU文档资料.zip",                   //原始文件名称,带后缀
+     * "size":55941272,                             //文件大小
+     * "url":"http://f1.afacms.com/fb/9a/fb9a120649ab510fc22d1b0adec0e006.zip", //文件访问/下载 url地址
+     * }
+     * "id":"WU_FILE_1"                             //页面端文件唯一识别ID
      * }
      *
      */
     public function upload_Action($encrypt = 0){
+        //最长半小时有效时间
+        set_time_limit(1800);
+
         //支持JS跨域上传文件,IE10以下浏览器不支持
         header('Access-Control-Allow-Origin：* ');
+
+        if(isset($_SERVER['REQUEST_METHOD']) && 'OPTIONS' == $_SERVER['REQUEST_METHOD']){
+            return $this->echojson($this->ret);
+        }
 
         $filename = input::request('fileVal')?input::request('fileVal'):'file';
         $file = input::file($filename);
@@ -64,9 +64,9 @@ class FileServer_Controller extends Server_Controller{
 
                 return $this->echojson($this->ret);
             }
-            if(input::post('name') && input::post('type')) {
-                $file['name'] = input::post('name');
-                $file['type'] = input::post('type');
+            if(input::request('name') && input::request('type')) {
+                $file['name'] = input::request('name');
+                $file['type'] = input::request('type');
             }
         }else{
             $sendbybinary = true;
@@ -108,7 +108,7 @@ class FileServer_Controller extends Server_Controller{
         }
 
         $fileinfo->suffix       = $fileinfoArr['suffix'];
-        $fileinfo->is_encrpt    = $encrypt == 1? true: false;
+        $fileinfo->is_encrpt    = $encrypt == 1? 1: 0;
 
         $fileinfo->save();
 
@@ -131,76 +131,99 @@ class FileServer_Controller extends Server_Controller{
     }
 
     /**
-     * 上传图片服务
+     * 上传文件-图片服务
+     * token  GET  授权token,通过key在后端调用服务接口取得
+     * name   GET/POST  文件名称,带后缀: 二进制传输时不能为空
+     * type   GET/POST  文件类型: 二进制传输时不能为空
+     * size   GET/POST  文件大小: 二进制传输时不能为空
+     * chunk  GET/POST  当前分片编号,从0开始
+     * chunks GET/POST  分片总数
+     * id     GET/POST  上传文件ID WU_FILE_0
+     * sizearr  GET/POST  图片尺寸, json数组字符串化,比如JSON.stringify([[1600,1600],[600,600]]) 表示生成两张图,大图为1600*1600,小图为600*600
+     * 详细说明如下
+     * 单张图片：JSON.stringify([[120,90]) 后端服务直接调用,可以传 $arr = array('w'=>120, 'h'=>90); 或 $arr = array(array(120,90); 或 array(120,90);
+     * 大小图片，JSON.stringify([[400,300],[120,90]]) 即两张图片, 后端服务直接调用,可以传：$arr = array(array(400,300),array(120,90)); array(400,300)为大图宽高，array(120,90)为小图宽高
+     * 大中小图，JSON.stringify([[1200,900],[400,300],[120,90]]) 即三张图片, 后端服务直接调用,可以传：$arr = array(array(1200,900),array(400,300),array(120,90)); 依次为大中小图的尺寸大小
      *
-     * 使用POST提交文件,需要提供以下参数
-     * name  上传文件里的  $_FILES 里相应文件的的 name属性
-     * type  上传文件里的  $_FILES 里相应文件的的 type属性
-     * file  上传文件里的  $_FILES 里相应文件的的 tmp_name属性
-     * size  array 图片裁剪尺寸, 如果不进行任何缩放则可以不传, 详细说明如下
-     * 单张图片：$arr = array('w'=>120, 'h'=>90); 或 $arr = array(array(120,90); 或 array(120,90);
-     * 大小图片，即两张图片：$arr = array(array(400,300),array(120,90)); array(400,300)为大图宽高，array(120,90)为小图宽高
-     * 大中小图，即三张图片：$arr = array(array(1200,900),array(400,300),array(120,90)); 依次为大中小图的尺寸大小
-     *
-     * 例子: 比如上传的某个文件的属性如下
-     *
-     * Array
-     * (
-     * [name] => 微信＋销售通道.png
-     * [type] => image/png
-     * [tmp_name] => /private/var/tmp/phpz2nNKg
-     * [error] => 0
-     * [size] => 1794128
-     * )
-     *
-     * name 的值对应为 微信＋销售通道.png
-     * type 的值对应为 image/png
-     * file 的值对应为 AT/private/var/tmp/phpz2nNKg
-     * 注意:file 值前面一定要有AT符号,用来识别其是一个POST文件,使用CRUL POST进行提交
+     * file 普通表单file类型上传
+     * 或 二进制类型文件内容上传
      *
      * @param boolean $encrypt :0或1
      * 0 为不加密, 默认为0, 为0时将会直接返回可访问的文件地址;
      * 1为加密, 不会返回可访问地址,需要经过授权, 通过指定接口才能访问;
      *
-     * @return json 图片url
-     * {
-     *  "errNum":0,  //成功标识, 0 为成功
-     *  "errMsg":"success",
-     *  "retData":{
-     *      "id":"b3645619a2951db9a72bd5ea7d25b584",
-     *      "name":"组织架构问题构建.png",
-     *      "size":398530,"suffix":"png",
-     *      "url":"http://api.service.com/upload/b3/64/b3645619a2951db9a72bd5ea7d25b584_s.png"
-     *  }
+     * @return json {
+     * "errNum":0,          //0标识成功
+     * "errMsg":"success",  //成功描述
+     * "retData":{
+     * "id":"fb9a120649ab510fc22d1b0adec0e006",     //文件唯一标识ID
+     * "name":"ULUCU文档资料.zip",                   //原始文件名称,带后缀
+     * "size":55941272,                             //文件大小
+     * "url":"http://f1.afacms.com/fb/9a/fb9a120649ab510fc22d1b0adec0e006.zip", //文件访问/下载 url地址
+     * }
+     * "id":"WU_FILE_1"                             //页面端文件唯一识别ID
      * }
      *
      */
     public function uploadPic_Action($encrypt = 0){
+        //最长半小时有效时间
+        set_time_limit(1800);
 
         ini_set ('memory_limit', '256M');
         //支持JS跨域上传文件,IE10以下浏览器不支持
         header('Access-Control-Allow-Origin: * ');
 
-
-        $filename = input::post('fileVal')?input::post('fileVal'):'file';
-        $file = input::file($filename);
-
-        if($file['error'] !== 0){
-            $this->ret['errNum'] = 1;
-            $this->ret['success'] = "文件上传失败";
-            $this->ret['retData'] = $file;
-
+        if(isset($_SERVER['REQUEST_METHOD']) && 'OPTIONS' == $_SERVER['REQUEST_METHOD']){
             return $this->echojson($this->ret);
         }
 
-        if(input::post('name') && input::post('type')) {
-            $file['name'] = input::post('name');
-            $file['type'] = input::post('type');
+        $filename = input::request('fileVal')?input::request('fileVal'):'file';
+        $file = input::file($filename);
+
+        $this->ret['id'] = input::request('id');
+
+        if(empty($file)){
+            //二进制上传图片文件支持
+            $fileinfoArr = Upload::createRandFile();
+            $postion = strrpos(input::request('name'), '.');
+            $suffix = substr(input::request('name'), $postion);
+            $fileinfoArr['filename'] = $fileinfoArr['filename'].$suffix;
+            $fileinfoArr['suffix'] = substr($suffix, 1);
+
+            $uploadPath = $fileinfoArr['filename'];
+
+            $out = @fopen($uploadPath, "wb");
+            if (!$in = @fopen("php://input", "rb")) {
+                $this->ret['errNum'] = 101;
+                $this->ret['errMsg'] = "Failed to open input stream.";
+                return false;
+            }
+            while ($buff = fread($in, 4096)) {
+                fwrite($out, $buff);
+            }
+            @fclose($out);
+            @fclose($in);
+
+            $file['name'] = input::request('name');
+            $file['type'] = input::request('type');
+        }else {
+            if ($file['error'] !== 0) {
+                $this->ret['errNum'] = 1;
+                $this->ret['success'] = "文件上传失败";
+                $this->ret['retData'] = $file;
+
+                return $this->echojson($this->ret);
+            }
+
+            if (input::request('name') && input::request('type')) {
+                $file['name'] = input::request('name');
+                $file['type'] = input::request('type');
+            }
+            //print_r(input::post());print_r($file);die;
+            $fileinfoArr = Upload::saveHash($file);
         }
 
-        $size_arr = input::post('sizearr')?json_decode(input::post('sizearr'), true):array();
-//print_r(input::post());print_r($file);die;
-        $fileinfoArr = Upload::saveHash($file);
+        $size_arr = input::request('sizearr')?json_decode(input::request('sizearr'), true):array();
 
         if(is_array($fileinfoArr)) {
             $return_arr = $this->imageScaling($fileinfoArr['filename'], $size_arr);
@@ -212,7 +235,7 @@ class FileServer_Controller extends Server_Controller{
                 $fileinfo->account_id = $this->account_id;
                 $fileinfo->file_name = $file['name'];
                 $fileinfo->file_type = $file['type'];
-                $fileinfo->file_size = $file['size'];
+                $fileinfo->file_size = input::request('size')?input::request('size'):$file['size'];;
                 $fileinfo->add_time = time();
 
                 //加密时需要对返回的hash_id进行一次再加密
@@ -223,7 +246,7 @@ class FileServer_Controller extends Server_Controller{
                 }
 
                 $fileinfo->suffix = $fileinfoArr['suffix'];
-                $fileinfo->is_encrpt    = $encrypt == 1? true: false;
+                $fileinfo->is_encrpt    = $encrypt == 1? 1: 0;
 
                 $fileinfo->extend_text = json_encode(array('type' => 'image', 'count' => $return_arr['count'], 'hash_url' => substr($return_arr['url'], $last_point + 1)));
 
@@ -514,9 +537,6 @@ class FileServer_Controller extends Server_Controller{
      * @return bool/array
      */
     private function uploadShard($post, $file_arr){
-        // 5 minutes execution time
-        @set_time_limit(5 * 60);
-
         //临时存放目录
         $tempDir = DOCROOT . DIRECTORY_SEPARATOR. 'temp'.DIRECTORY_SEPARATOR;
 
