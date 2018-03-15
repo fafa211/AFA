@@ -81,4 +81,87 @@ class funs
         return $return == 'array'?$ret:(object)$ret;
     }
 
+    /**
+     * @param $text  内容:地址或文本 必填
+     * @param bool $outfile 输出保存文件
+     * @param int $level 容错率，也就是有被覆盖的区域还能识别 L=>7% M=>15% Q=>25% H=>30%
+     * @param int $size 生成图片大小，默认是3
+     * @param int $margin 二维码周围边框空白区域间距值
+     * @param bool $saveandprint 是否保存二维码并 显示
+     * @param bool/string $logo logo地址,没有则默认为false
+     */
+    public static function QRCode($text, $outfile=false, $level="L", $size=3, $margin=4, $saveandprint=false, $logo = false){
+        include_once "phpqrcode".DIRECTORY_SEPARATOR."phpqrcode.php";
+
+        if(false === $logo) {
+            QRcode::png($text, $outfile, $level, $size, $margin, $saveandprint);
+        }else{
+
+            //文件唯一标识ID
+            $hash_id = md5(uniqid());
+            //文件名称
+            $filename = $hash_id . '.png';
+            //文件存储目录
+            $directory = Upload::getDirectory($hash_id);
+            //创建文件存储目录
+            $flag = common::createDir($directory);
+            if(!$flag) {
+                throw new Exception('Directory '.$directory.' must be writable', E_ERROR);
+                return false;
+            }
+            // Make the filename into a complete path
+            $filename = $directory.DIRECTORY_SEPARATOR.$filename;
+
+            //生成二维码图片
+            QRcode::png($text, $filename, $level, $size, 2, $margin);
+            $logodir = DOCROOT.'/static/images/icons/';
+            if(!file_exists($logo)){
+                $logo = $logodir.$logo;
+                if(!file_exists($logodir.$logo)){
+                    $logo = $logodir.'iconlogo.png';//默认
+                }
+            }
+
+            //已经生成的原始二维码图
+            $QR = $filename;
+
+            if ($logo !== FALSE) {
+                $QR = imagecreatefromstring(file_get_contents($QR));
+                $logo = imagecreatefromstring(file_get_contents($logo));
+                $QR_width = imagesx($QR);//二维码图片宽度
+                $QR_height = imagesy($QR);//二维码图片高度
+                $logo_width = imagesx($logo);//logo图片宽度
+                $logo_height = imagesy($logo);//logo图片高度
+                $logo_qr_width = $QR_width / 5;
+                $scale = $logo_width / $logo_qr_width;
+                $logo_qr_height = $logo_height / $scale;
+                $from_width = ($QR_width - $logo_qr_width) / 2;
+                //重新组合图片并调整大小
+                imagecopyresampled($QR, $logo, $from_width, $from_width, 0, 0, $logo_qr_width,
+                    $logo_qr_height, $logo_width, $logo_height);
+            }
+            if(false === $outfile) {
+                //输出图片
+                Header("Content-type: image/png");
+                ImagePng($QR);
+            }else{
+                ImagePng($QR, $filename);
+            }
+        }
+
+    }
+
+    /**
+     * 读取对应数组里的KEY值
+     *
+     * @param $v
+     * @param $arr
+     */
+    public static function getKeyInArray($v, $arr){
+        foreach($arr as $key=>$value){
+            if($value == $v) return $key;
+        }
+        return false;
+    }
+
 }

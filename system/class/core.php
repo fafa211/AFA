@@ -45,11 +45,13 @@ class Request{
                 if ($position !== false) {
                     $url = substr($url, 0, $position);
                 }
+                $url = str_replace('/index.php', '', $url);
+                $url = str_replace('//', '/', $url);
             }
         }else{
             $url = self::parse($url);//得到格式一致的路径URL，并设置$_GET
         }
-
+//print_r($_SERVER);die;
         if(F::config('suffix')) {
             $url = str_replace(F::config('suffix'), '', $url);
         }
@@ -366,8 +368,6 @@ class Model {
 	protected $table;
 	//模块名称
 	protected $module;
-	//数据库配置
-	protected $config;
     //字段名称
     protected $fileds = array();
 
@@ -398,10 +398,10 @@ class Model {
             }
 	    }
 	    if ($this->{$this->primary}){
-	        $sql = sql::update($fieldsArr, $this->table, array("{$this->primary}"=>$this->{$this->primary}));
+	        $sql = sql::update($fieldsArr, $this->table, array("{$this->primary}"=>$this->{$this->primary}), $this->db->driver);
 	    }else{
 	        $insert = true;
-	        $sql = sql::insert($fieldsArr, $this->table);
+	        $sql = sql::insert($fieldsArr, $this->table, $this->db->driver);
 	    }
 //echo $sql;die;
 	    $flag = $this->db->exec($sql);
@@ -433,7 +433,7 @@ class Model {
 	 */
 	public function delete(){
 	    if ($this->{$this->primary}){
-	        $sql = sql::delete($this->table, array("{$this->primary}"=>"{$this->{$this->primary}}"));
+	        $sql = sql::delete($this->table, array("{$this->primary}"=>"{$this->{$this->primary}}"), $this->db->driver);
 	        return $this->db->exec($sql);
 	    }
 	    return false;
@@ -446,10 +446,9 @@ class Model {
 	 * @return multitype: 查询结果
 	 */
 	public function lists($limit = "0,10", $where = array(), $orderby = ''){
-	    $sql = sql::select('*', $this->table)
-	    ->where($where)
+	    $sql = sql::select('*', $this->table, $where, $this->db->driver)
 	    ->orderby($orderby?$orderby:"{$this->primary} DESC")
-	    ->limit($limit)->render();
+	    ->limit($limit);
 	    return $this->db->query($sql);
 	}
 
@@ -461,9 +460,8 @@ class Model {
      * @return int: 查询结果数量
      */
     public function count($where = array()){
-        $sql = sql::select('count(1)', $this->table)
-            ->where($where)
-            ->render();
+        $sql = sql::select('count(1)', $this->table, $where, $this->db->driver)
+            ->where($where);
         return $this->db->getOne($sql);
     }
 
@@ -474,7 +472,7 @@ class Model {
      */
     public function get($id){
         if ($id){
-            $sql = sql::select('*', $this->table, array("$this->primary"=>$id));
+            $sql = sql::select('*', $this->table, array("$this->primary"=>$id), $this->db->driver);
             $orm = $this->db->getOneResult($sql);
             if ($orm){
                 foreach ($orm as $k => $v) {

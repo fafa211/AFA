@@ -71,8 +71,6 @@ $modules = array(
     'account' => MODULEPATH.'account'.DIRECTORY_SEPARATOR,//服务授权模块
     'logServer' => MODULEPATH.'logServer'.DIRECTORY_SEPARATOR,
     'vote' => MODULEPATH.'vote'.DIRECTORY_SEPARATOR,
-
-
 );
 
 require(CLASSPATH.'core'.EXT);
