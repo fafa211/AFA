@@ -80,12 +80,16 @@ class db
      * @return  array 查询得到的数据数组
      */
     public function query($sql, $master = false)
-    {	
-    	$this->setServer($master);
-        $this->db->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
-        $rs = $this->db->query($sql);
-        $rs->setFetchMode($this->fetch_mode);
-        return $rs->fetchAll();
+    {
+        try {
+            $this->setServer($master);
+            $this->db->setAttribute(PDO::ATTR_CASE, PDO::CASE_NATURAL);
+            $rs = $this->db->query($sql);
+            $rs->setFetchMode($this->fetch_mode);
+            return $rs->fetchAll();
+        } catch (PDOException $e) {
+            AfaException::exception_handle($e);
+        }
     }
     
    
@@ -96,8 +100,12 @@ class db
      */
     public function exec($sql, $master = true)
     {
-    	$this->setServer($master);
-        return $this->db->exec($sql);
+        try {
+            $this->setServer($master);
+            return $this->db->exec($sql);
+        }catch(PDOException $e){
+            AfaException::exception_handle($e);
+        }
     }
    
     /**
@@ -118,9 +126,13 @@ class db
      */
     public function getOne($sql, $master = false)
     {
-    	$this->setServer($master);
-        $rs = $this->db->query($sql);
-        return $rs->fetchColumn();
+        try {
+            $this->setServer($master);
+            $rs = $this->db->query($sql);
+            return $rs->fetchColumn();
+        } catch (PDOException $e) {
+            AfaException::exception_handle($e);
+        }
     } 
     
     /**
@@ -131,11 +143,15 @@ class db
      */
     public function getOneResult($sql)
     {
-    	$this->setServer($sql);
-        $rs = $this->db->query($sql);
-		
-        $rs->setFetchMode($this->fetch_mode);
-        return $rs->fetch();
+        try {
+            $this->setServer($sql);
+            $rs = $this->db->query($sql);
+
+            $rs->setFetchMode($this->fetch_mode);
+            return $rs->fetch();
+        } catch (PDOException $e) {
+            AfaException::exception_handle($e);
+        }
     }
     
     /**
@@ -149,7 +165,7 @@ class db
             try
             {
                 $this->setServer(true);
-                $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                //$this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 $this->db->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
                 $this->db->beginTransaction();
                 foreach ($sqlQueue as $sql)
@@ -158,8 +174,9 @@ class db
                 }
                 $this->db->commit();
                 return true;
-            } catch (Exception $e) {
+            } catch (PDOException $e) {
                 $this->db->rollBack();
+                AfaException::exception_handle($e);
                 return false;
             }
         }else{
@@ -195,6 +212,7 @@ class db
     private static function connect($config){
         $dsn = "mysql:host={$config['host']};dbname={$config['dbname']}";
         $db = new PDO($dsn, $config['user'], $config['password'], array(PDO::ATTR_PERSISTENT => $config['conmode']));
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);//设置异常模式
         $db->exec('SET NAMES ' . $config['charset']);
         return $db;
     }

@@ -134,19 +134,31 @@ class Curl {
      */
     public static function get($url, Array $headers = array(), $headers_only = FALSE, Array $curl_options = array())
     {
-        $ch = Curl::instance($curl_options);
-        
-        $ch->set_opt(CURLOPT_URL, $url)
-            ->set_opt(CURLOPT_RETURNTRANSFER, TRUE)
-            ->set_opt(CURLOPT_NOBODY, $headers_only);
-        
-        // Set any additional headers
-        if( ! empty($headers))
-        {
-            $ch->set_opt(CURLOPT_HTTPHEADER, $headers);    
-        } 
-        
-        return $ch->execute();
+        $count = 0;
+        curltag1:
+        try {
+            $ch = Curl::instance($curl_options);
+
+            $ch->set_opt(CURLOPT_URL, $url)
+                ->set_opt(CURLOPT_RETURNTRANSFER, TRUE)
+                ->set_opt(CURLOPT_NOBODY, $headers_only);
+
+            $ch->set_opt(CURLOPT_NOSIGNAL, 1);//处理毫秒级设置的的BUG
+            $ch->set_opt(CURLOPT_FRESH_CONNECT, 1);//强制获取一个新的连接，而不是缓存中的连接
+            $ch->set_opt(CURLOPT_CONNECTTIMEOUT_MS, 1000);//尝试连接等待的时间，以毫秒为单位。设置为0，则无限等待。
+            $ch->set_opt(CURLOPT_TIMEOUT_MS, 2000);//设置cURL允许执行的最长毫秒数
+
+            // Set any additional headers
+            if (!empty($headers)) {
+                $ch->set_opt(CURLOPT_HTTPHEADER, $headers);
+            }
+            $count++;
+            return $ch->execute();
+        }catch(Exception $e){
+            if($count == 1) {
+                goto curltag1;
+            }
+        }
     }
     
     
@@ -162,20 +174,32 @@ class Curl {
      */
     public static function post($url, Array $data = array(), Array $headers = array(), $headers_only = FALSE, Array $curl_options = array())
     {
-        $ch = Curl::instance($curl_options);
-        
-        $ch->set_opt(CURLOPT_URL, $url)
-            ->set_opt(CURLOPT_NOBODY, $headers_only)
-            ->set_opt(CURLOPT_RETURNTRANSFER, TRUE)
-            ->set_opt(CURLOPT_POST, TRUE)
-            ->set_opt(CURLOPT_POSTFIELDS, $data);
-      
-          //Set any additional headers
-        if( ! empty($headers)) 
-        {
-            $ch->set_opt(CURLOPT_HTTPHEADER, $headers);
+        $count = 0;
+        curltag2:
+        try {
+            $ch = Curl::instance($curl_options);
+
+            $ch->set_opt(CURLOPT_URL, $url)
+                ->set_opt(CURLOPT_NOBODY, $headers_only)
+                ->set_opt(CURLOPT_RETURNTRANSFER, TRUE)
+                ->set_opt(CURLOPT_POST, TRUE)
+                ->set_opt(CURLOPT_POSTFIELDS, $data);
+
+            $ch->set_opt(CURLOPT_NOSIGNAL, 1);//处理毫秒级设置的的BUG
+            $ch->set_opt(CURLOPT_FRESH_CONNECT, 1);//强制获取一个新的连接，而不是缓存中的连接
+            $ch->set_opt(CURLOPT_CONNECTTIMEOUT_MS, 1000);//尝试连接等待的时间，以毫秒为单位。设置为0，则无限等待。
+            $ch->set_opt(CURLOPT_TIMEOUT_MS, 2000);//设置cURL允许执行的最长毫秒数
+
+            //Set any additional headers
+            if (!empty($headers)) {
+                $ch->set_opt(CURLOPT_HTTPHEADER, $headers);
+            }
+
+            return $ch->execute();
+        } catch (Exception $e) {
+            if ($count == 1) {
+                goto curltag2;
+            }
         }
-        
-        return $ch->execute();
     }
 } // End Curl class

@@ -39,7 +39,7 @@ class Upload {
     );
 
     public static $file_types = array(
-        'txt','doc','pdf','rar','zip','png','jpg','gif','xls','xlsx','doc','docx','ppt','pptx','cvs','tar','gz','mp4','mp3','avi',
+        'txt','doc','pdf','rar','zip','png','jpg','gif','xls','xlsx','doc','docx','ppt','pptx','cvs','tar','gz','mp4','mp3','avi','amr'
     );
 
 	/**

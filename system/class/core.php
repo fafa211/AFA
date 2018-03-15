@@ -678,35 +678,14 @@ class AfaException {
     {
         $code = $exception->getCode();
         self::log($code, $exception->getMessage(), $exception->getFile(), $exception->getLine());
+
+        echo '<pre>';
+        echo "<b>Error Code</b>: [$code]\n";
+        echo "<b>ERROR Message</b>: {$exception->getMessage()}\n";
+        echo "<b>ERROR File</b>: {$exception->getFile()} In Line {$exception->getLine()}\n";
+        echo "<b>Trace</b>:<br />".$exception->getTraceAsString().'<br>';
+        echo '</pre>';
         
-        switch ($code){
-            case E_ERROR:
-            case 1045:
-                if(USE_SWOOLE){
-                    echo "<b>ERROR</b> [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
-                }else {
-                    $view = new View(APPPATH . 'view' . DIRECTORY_SEPARATOR . 'error');
-                    $view->type = '错误';
-                    $view->message = $exception->getMessage();
-                    $view->file = $exception->getFile();
-                    $view->line = $exception->getLine();
-                    $view->trace = preg_replace("/\n/", "</p><p>", '<p>' . $exception->getTraceAsString());
-
-                    $view->render();
-                }
-
-                break;
-            case E_WARNING:
-                echo "<b>WARNING</b> [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
-                break;
-            case E_NOTICE:
-                echo "<b>NOTICE</b>: [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
-                break;
-            default:
-                echo "<b>Unknown error type</b>: [$code] {$exception->getMessage()} {$exception->getFile()} {$exception->getLine()}<br />\n";
-                break;
-                
-        }
         if(!USE_SWOOLE) exit(0);
         return true;
     }
